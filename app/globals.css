@@ -1,0 +1,107 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+button { cursor: pointer; }
+
+.map-overlay-panel {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    max-width: 250px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.map-overlay-panel .control-panel-title {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.map-overlay-panel .layer-selection {
+    margin-bottom: 12px;
+}
+
+.map-overlay-panel .layer-option {
+    padding: 6px;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+.map-overlay-panel .layer-option input[type="radio"] {
+    margin-right: 6px;
+    transform: scale(1.1);
+}
+
+.map-overlay-panel .layer-option label {
+    cursor: pointer;
+    color: #2c3e50;
+}
+
+.map-overlay-panel .panel-button {
+    width: 100%;
+    background: linear-gradient(135deg, #2d5016 0%, #4a7c59 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(45, 80, 22, 0.3);
+    margin-bottom: 12px;
+}
+
+.map-overlay-panel .panel-button:last-child {
+    margin-bottom: 0;
+}
+
+.map-overlay-panel .panel-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
+}
+
+/* Mobile: Move panel to bottom */
+@media (max-width: 768px) {
+    .map-overlay-panel {
+        top: auto;
+        bottom: 15px;
+        right: 15px;
+        left: 15px;
+        max-width: 90%;
+        width: calc(100% - 30px);
+        min-width: auto;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    
+    .map-overlay-panel .control-panel-title {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+    
+    .map-overlay-panel .layer-selection {
+        margin-bottom: 10px;
+    }
+    
+    .map-overlay-panel .layer-option {
+        padding: 5px;
+        margin-bottom: 5px;
+        font-size: 0.85rem;
+    }
+    
+    .map-overlay-panel .panel-button {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+    }
+}
+
