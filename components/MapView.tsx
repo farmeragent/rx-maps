@@ -9,13 +9,13 @@ type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
 function getSourceConfigForField(fieldName: string) {
   switch ((fieldName || '').toLowerCase()) {
     case 'north of road':
-      return { url: 'mapbox://zeumer.2fksynfr', layer: 'northofroad', center: [-86.684316, 32.431793] as [number, number] };
+      return { url: 'mapbox://zeumer.bofg9ncj', layer: 'northofroadhighres', center: [-86.684316, 32.431793] as [number, number] };
     case 'south of road':
-      return { url: 'mapbox://zeumer.bvvl36h0', layer: 'southofroad', center: [-86.683, 32.422] as [number, number] };
+      return { url: 'mapbox://zeumer.8d46889j', layer: 'southofroadhighres', center: [-86.683, 32.422] as [number, number] };
     case 'railroad pivot':
-      return { url: 'mapbox://zeumer.3r8a02tb', layer: 'railroadpivot', center: [-86.376, 32.416] as [number, number] };
+      return { url: 'mapbox://zeumer.2tepd0uh', layer: 'railroadpivothighres', center: [-86.376, 32.416] as [number, number] };
     default:
-      return { url: 'mapbox://zeumer.2fksynfr', layer: 'northofroad', center: [-86.684316, 32.431793] as [number, number] };
+      return { url: 'mapbox://zeumer.bofg9ncj', layer: 'northofroadhighres', center: [-86.684316, 32.431793] as [number, number] };
   }
 }
 
