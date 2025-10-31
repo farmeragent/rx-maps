@@ -188,27 +188,27 @@ export default function MapView(props: {
         map.addLayer({
           id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
           filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#ffffff', 'line-width': 1 }
+          paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
         });
         
         // Add mediumres layer
         map.addLayer({
           id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
           filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
         });
         
         map.addLayer({
           id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
           filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#ffffff', 'line-width': 1 }
+          paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
         });
         
         // Add boundariesshp layer
         map.addLayer({
           id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
           filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
         });
         
         map.addLayer({
@@ -242,7 +242,7 @@ export default function MapView(props: {
     
     try {
       const paintColor = buildFillPaint(props.selectedAttr);
-      const paintOpacity = props.selectedAttr ? 0.6 : 0.0;
+      const paintOpacity = props.selectedAttr ? 0.8 : 0.0;
       
       // Update all three resolution layers
       const layerIds = [
@@ -283,39 +283,39 @@ export default function MapView(props: {
       map.addLayer({
         id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
       });
       
       map.addLayer({
         id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
         filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
       });
       
       // Add mediumres layer
       map.addLayer({
         id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
       });
       
       map.addLayer({
         id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
         filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
       });
       
       // Add boundariesshp layer
       map.addLayer({
         id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
         filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
       });
       
       map.addLayer({
         id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
         filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
       });
     } catch (error) {
       console.error('Error updating layer:', error);
