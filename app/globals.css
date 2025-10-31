@@ -140,6 +140,33 @@ button { cursor: pointer; }
     box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
 }
 
+.home-button {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 8px;
+    font-size: 20px;
+    color: #2c3e50;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.home-button:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* Mobile: Move panel to bottom */
 @media (max-width: 768px) {
     .map-overlay-panel {
@@ -192,6 +219,14 @@ button { cursor: pointer; }
     
     .dialog-content p {
         font-size: 1rem;
+    }
+    
+    .home-button {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+        top: 10px;
+        left: 10px;
     }
 }
 

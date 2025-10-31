@@ -135,6 +135,7 @@ export default function MapView(props: {
   onSetNutrientNeeded: (v: 'n-needed'|'p-needed'|'k-needed') => void;
   onNext: () => void;
   onBack: () => void;
+  onHome: () => void;
 }) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapNode = useRef<HTMLDivElement | null>(null);
@@ -326,6 +327,8 @@ export default function MapView(props: {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
       <div ref={mapNode} style={{ width: '100%', height: '100%' }} />
+
+      <button className="home-button" onClick={props.onHome} title="Home">⌂</button>
 
       <div className="map-overlay-panel">
         {props.page === 'yield' && (

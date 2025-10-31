@@ -40,6 +40,11 @@ export default function Page() {
     else if (page === 'yield') { setCurrentField(''); setPage('fields'); }
   }
 
+  function goHome() {
+    setCurrentField('');
+    setPage('fields');
+  }
+
   return (
     <div style={styles.appRoot}>
       {page === 'fields' && (
@@ -84,6 +89,7 @@ export default function Page() {
           onSetNutrientNeeded={setNutrientNeeded}
           onNext={() => setPage(page === 'yield' ? 'nutrient-capacity' : 'nutrient-needed')}
           onBack={goBack}
+          onHome={goHome}
         />
       )}
     </div>
