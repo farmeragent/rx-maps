@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import styles from './pageStyles';
-import { FIELD_NAMES } from '../components/MapView';
+import { FIELD_NAMES } from '../constants';
 
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
