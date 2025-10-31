@@ -54,6 +54,24 @@ function getLayerNamesForField(fieldName: string) {
   };
 }
 
+function getLegendInfo(attribute: string | null) {
+  if (!attribute) return { colors: ['#ffffff', '#ffffff'], min: 0, max: 0 };
+  
+  if (attribute === 'yield_target') {
+    return { colors: ['#a50426', '#fefdbd', '#016937'], stops: [0, 125, 250], min: 0, max: 250 };
+  }
+  else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
+    return { colors: ['#f5fbf4', '#054419'], stops: [0, 250], min: 0, max: 250 };
+  }
+  else if (attribute === 'P_in_soil' || attribute === 'P_to_apply') {
+    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 250], min: 0, max: 250 };
+  }
+  else if (attribute === 'K_in_soil' || attribute === 'K_to_apply') {
+    return { colors: ['#f6faff', '#08316e'], stops: [0, 250], min: 0, max: 250 };
+  }
+  return { colors: ['#f1f8e9', '#2e7d32'], stops: [0, 100], min: 0, max: 100 };
+}
+
 function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
   if (attribute === 'yield_target') {
@@ -369,6 +387,39 @@ export default function MapView(props: {
       <div ref={mapNode} style={{ width: '100%', height: '100%' }} />
 
       <button className="home-button" onClick={props.onHome} title="Home">⌂</button>
+
+      {props.selectedAttr && (
+        <div className="map-legend">
+          <div className="legend-container">
+            {(() => {
+              const legendInfo = getLegendInfo(props.selectedAttr);
+              return (
+                <>
+                  <div className="legend-gradient">
+                    {legendInfo.colors.length === 2 ? (
+                      <div 
+                        className="legend-gradient-bar" 
+                        style={{
+                          background: `linear-gradient(to top, ${legendInfo.colors[0]}, ${legendInfo.colors[1]})`
+                        }}
+                      />
+                    ) : (
+                      <div 
+                        className="legend-gradient-bar" 
+                        style={{
+                          background: `linear-gradient(to top, ${legendInfo.colors[0]}, ${legendInfo.colors[1]}, ${legendInfo.colors[2]})`
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span className="legend-max">{legendInfo.max}</span>
+                  <span className="legend-min">{legendInfo.min}</span>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       <div className="map-overlay-panel">
         {props.page === 'yield' && (
