@@ -6,7 +6,17 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
 
+function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-needed'|'k-needed') {
+  if (n === 'n-current') return 'Nitrogen';
+  if (n === 'p-current') return 'Phosphorus';
+  if (n === 'k-current') return 'Potassium';
+  if (n === 'n-needed') return 'Nitrogen';
+  if (n === 'p-needed') return 'Phosphorus';
+  return 'Potassium';
+}
+
 function getSourceConfigForField(fieldName: string) {
+  console.log("here")
   switch ((fieldName || '').toLowerCase()) {
     case 'north of road':
       return { url: 'mapbox://zeumer.bofg9ncj', layer: 'northofroadhighres', center: [-86.684316, 32.431793] as [number, number] };
@@ -21,15 +31,62 @@ function getSourceConfigForField(fieldName: string) {
 
 function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
+  console.log(attribute)
   if (attribute === 'yield_target') {
     return [
       'interpolate', ['linear'],
       ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#f1f8e9',
-      50, '#c8e6c9',
-      180, '#81c784',
-      200, '#4caf50',
-      250, '#2e7d32'
+      0, '#a50426',
+      125, '#fefdbd',
+      250, '#016937'
+    ] as any;
+  }
+  else if (attribute === 'N_in_soil') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#f5fbf4',
+      250, '#054419'
+    ] as any;
+  }
+  else if (attribute === 'P_in_soil') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#fbfbfd',
+      250, '#3b0379'
+    ] as any;
+  }
+  else if (attribute === 'K_in_soil') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#f6faff',
+      250, '#08316e'
+    ] as any;
+  }
+  else if (attribute === 'N_to_apply') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#f5fbf4',
+      250, '#054419'
+    ] as any;
+  }
+  else if (attribute === 'P_to_apply') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#fbfbfd',
+      250, '#3b0379'
+    ] as any;
+  }
+  else if (attribute === 'K_to_apply') {
+    return [
+      'interpolate', ['linear'],
+      ['coalesce', ['to-number', ['get', attribute]], 0],
+      0, '#f6faff',
+      250, '#08316e'
     ] as any;
   }
   return [
@@ -92,13 +149,13 @@ export default function MapView(props: {
         map.addLayer({
           id: 'data-fill', type: 'fill', source: 'data-source', 'source-layer': cfg.layer,
           filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
         });
 
         map.addLayer({
           id: 'data-line', type: 'line', source: 'data-source', 'source-layer': cfg.layer,
           filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#ffffff', 'line-width': 1 }
+          paint: { 'line-color': '#0f0f0f', 'line-width': 0.0001 }
         });
       } catch (error) {
         console.error('Error loading map layers:', error);
@@ -132,35 +189,43 @@ export default function MapView(props: {
       <div ref={mapNode} style={{ width: '100%', height: '100%' }} />
 
       <div className="map-overlay-panel">
-        <div className="control-panel-title">Layer Selection</div>
         {props.page === 'yield' && (
-          <div className="layer-selection">
-            <div className="layer-option">
-              <input type="radio" id="yield-target" name="yield-layer" defaultChecked />
-              <label htmlFor="yield-target">Yield Target</label>
+          <div className="control-panel-title">
+            Your current yield target:
+            <div className="layer-selection">
+              <div className="layer-option">
+                <input type="radio" id="yield-target" name="yield-layer" defaultChecked />
+                <label htmlFor="yield-target">Yield Target</label>
+              </div>
             </div>
           </div>
         )}
 
         {props.page === 'nutrient-capacity' && (
+          <div className="control-panel-title">
+           Nutrients currently in soil: 
           <div className="layer-selection">
             {(['n-current','p-current','k-current'] as const).map(v => (
               <div className="layer-option" key={v}>
                 <input type="radio" id={v} name="nutrient-current-layer" checked={props.nutrientCurrent===v} onChange={() => props.onSetNutrientCurrent(v)} />
-                <label htmlFor={v}>{v.replace('-',' ').toUpperCase()}</label>
+                <label htmlFor={v}>{getNutrientName(v)}</label>
               </div>
             ))}
+          </div>
           </div>
         )}
 
         {props.page === 'nutrient-needed' && (
+          <div className="control-panel-title">
+           Nutrients needed to reach yield target:
           <div className="layer-selection">
             {(['n-needed','p-needed','k-needed'] as const).map(v => (
               <div className="layer-option" key={v}>
                 <input type="radio" id={v} name="nutrient-needed-layer" checked={props.nutrientNeeded===v} onChange={() => props.onSetNutrientNeeded(v)} />
-                <label htmlFor={v}>{v.replace('-',' ').toUpperCase()}</label>
+                <label htmlFor={v}>{getNutrientName(v)}</label>
               </div>
             ))}
+          </div>
           </div>
         )}
 
