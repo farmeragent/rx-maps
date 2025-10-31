@@ -89,6 +89,62 @@ function getLegendInfo(attribute: string | null) {
   return { colors: ['#f1f8e9', '#2e7d32'], stops: [0, 100], min: 0, max: 100 };
 }
 
+function addMapLayers(
+  map: mapboxgl.Map,
+  layerNames: { highres: string; mediumres: string; boundariesshp: string },
+  selectedAttr: string | null
+) {
+  // Remove existing layers if any
+  const layerIds = [
+    'data-fill-highres', 'data-line-highres',
+    'data-fill-mediumres', 'data-line-mediumres',
+    'data-fill-boundariesshp', 'data-line-boundariesshp'
+  ];
+  
+  layerIds.forEach(layerId => {
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+  });
+
+  // Add highres layer
+  map.addLayer({
+    id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+  });
+  
+  map.addLayer({
+    id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
+    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+    paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
+  });
+  
+  // Add mediumres layer
+  map.addLayer({
+    id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+  });
+  
+  map.addLayer({
+    id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
+    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+    paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
+  });
+  
+  // Add boundariesshp layer
+  map.addLayer({
+    id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+  });
+  
+  map.addLayer({
+    id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
+    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+    paint: { 'line-color': '#0f0f0f', 'line-width': 0.0001 }
+  });
+}
+
 function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
   if (attribute === 'yield_target') {
@@ -206,52 +262,8 @@ export default function MapView(props: {
         if (map.getSource('data-source')) map.removeSource('data-source');
         map.addSource('data-source', { type: 'vector', url: cfg.url });
         
-        // Remove existing layers if any
-        if (map.getLayer('data-fill-highres')) map.removeLayer('data-fill-highres');
-        if (map.getLayer('data-line-highres')) map.removeLayer('data-line-highres');
-        if (map.getLayer('data-fill-mediumres')) map.removeLayer('data-fill-mediumres');
-        if (map.getLayer('data-line-mediumres')) map.removeLayer('data-line-mediumres');
-        if (map.getLayer('data-fill-boundariesshp')) map.removeLayer('data-fill-boundariesshp');
-        if (map.getLayer('data-line-boundariesshp')) map.removeLayer('data-line-boundariesshp');
-        
-        // Add highres layer
-        map.addLayer({
-          id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-        });
-        
-        map.addLayer({
-          id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
-          filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
-        });
-        
-        // Add mediumres layer
-        map.addLayer({
-          id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-        });
-        
-        map.addLayer({
-          id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
-          filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
-        });
-        
-        // Add boundariesshp layer
-        map.addLayer({
-          id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-        });
-        
-        map.addLayer({
-          id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-          filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-          paint: { 'line-color': '#0f0f0f', 'line-width': 0.0001 }
-        });
+        // Add all layers using reusable function
+        addMapLayers(map, layerNames, props.selectedAttr);
       } catch (error) {
         console.error('Error loading map layers:', error);
       }
@@ -345,55 +357,8 @@ export default function MapView(props: {
     if (!map || !map.isStyleLoaded() || !map.getSource('data-source')) return;
     
     try {
-      // Remove existing layers
-      const layerIds = [
-        'data-fill-highres', 'data-line-highres',
-        'data-fill-mediumres', 'data-line-mediumres',
-        'data-fill-boundariesshp', 'data-line-boundariesshp'
-      ];
-      
-      layerIds.forEach(layerId => {
-        if (map.getLayer(layerId)) map.removeLayer(layerId);
-      });
-
-      // Add highres layer
-      map.addLayer({
-        id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
-        filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-      });
-      
-      map.addLayer({
-        id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
-        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
-      });
-      
-      // Add mediumres layer
-      map.addLayer({
-        id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
-        filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-      });
-      
-      map.addLayer({
-        id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
-        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
-      });
-      
-      // Add boundariesshp layer
-      map.addLayer({
-        id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-        filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
-      });
-      
-      map.addLayer({
-        id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-        paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
-      });
+      // Add all layers using reusable function
+      addMapLayers(map, layerNames, props.selectedAttr);
     } catch (error) {
       console.error('Error updating layer:', error);
     }
