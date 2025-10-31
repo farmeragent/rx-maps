@@ -69,6 +69,76 @@ button { cursor: pointer; }
     box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
 }
 
+.map-overlay-panel .download-button {
+    width: 100%;
+    background: #0066cc;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.map-overlay-panel .download-button:hover {
+    background: #0052a3;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+}
+
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.dialog-content p {
+    margin: 0 0 20px 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.dialog-button {
+    background: linear-gradient(135deg, #2d5016 0%, #4a7c59 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(45, 80, 22, 0.3);
+}
+
+.dialog-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
+}
+
 /* Mobile: Move panel to bottom */
 @media (max-width: 768px) {
     .map-overlay-panel {
@@ -102,6 +172,21 @@ button { cursor: pointer; }
         padding: 8px 12px;
         font-size: 0.85rem;
         margin-bottom: 12px;
+    }
+    
+    .map-overlay-panel .download-button {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        margin-top: 12px;
+    }
+    
+    .dialog-content {
+        padding: 20px;
+        max-width: 90%;
+    }
+    
+    .dialog-content p {
+        font-size: 1rem;
     }
 }
 

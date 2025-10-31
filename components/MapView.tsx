@@ -139,6 +139,7 @@ export default function MapView(props: {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapNode = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState<number>(15);
+  const [showDialog, setShowDialog] = useState<boolean>(false);
 
   const cfg = useMemo(() => getSourceConfigForField(props.currentField), [props.currentField]);
   const layerNames = useMemo(() => getLayerNamesForField(props.currentField), [props.currentField]);
@@ -371,7 +372,19 @@ export default function MapView(props: {
         {props.page !== 'nutrient-needed' && (
           <button className="panel-button" onClick={props.onNext}>Next →</button>
         )}
+        {props.page === 'nutrient-needed' && (
+          <button className="download-button" onClick={() => setShowDialog(true)}>Download Rx Map</button>
+        )}
       </div>
+
+      {showDialog && (
+        <div className="dialog-overlay" onClick={() => setShowDialog(false)}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <p>This feature is a work in progress!</p>
+            <button className="dialog-button" onClick={() => setShowDialog(false)}>Send to machine</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
