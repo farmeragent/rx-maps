@@ -6,6 +6,17 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
 
+// GeoJSON geometry types
+type GeoJSONPolygon = {
+  type: 'Polygon';
+  coordinates: [number, number][][];
+};
+
+type GeoJSONLineString = {
+  type: 'LineString';
+  coordinates: [number, number][];
+};
+
 function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-needed'|'k-needed') {
   if (n === 'n-current') return 'Nitrogen (N)';
   if (n === 'p-current') return 'Phosphorus (P)';
@@ -264,7 +275,7 @@ export default function MapView(props: {
       const feature = features[0];
 
       if ("coordinates" in feature.geometry) {
-        const coordinates = (feature.geometry as Point | Polygon | LineString).coordinates;
+        const coordinates = (feature.geometry as GeoJSONPolygon | GeoJSONLineString).coordinates;
         let lat_sum = 0;
         let lon_sum = 0;
         let count = 0;
