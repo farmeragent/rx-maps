@@ -210,9 +210,15 @@ export default function MapView(props: {
   const mapNode = useRef<HTMLDivElement | null>(null);
   const [zoom, setZoom] = useState<number>(15);
   const [showDialog, setShowDialog] = useState<boolean>(false);
+  const selectedAttrRef = useRef<string | null>(null);
 
   const cfg = useMemo(() => getSourceConfigForField(props.currentField), [props.currentField]);
   const layerNames = useMemo(() => getLayerNamesForField(props.currentField), [props.currentField]);
+
+  useEffect(() => {
+    // keep latest selected attribute available to event handlers
+    selectedAttrRef.current = props.selectedAttr;
+  }, [props.selectedAttr]);
 
   useEffect(() => {
     if (!mapNode.current) return;
@@ -260,7 +266,8 @@ export default function MapView(props: {
       if (!features.length) {
         return;
       }
-      if (!props.selectedAttr) {
+      const currentAttr = selectedAttrRef.current;
+      if (!currentAttr) {
         return;
       }
       const feature = features[0];
@@ -277,8 +284,8 @@ export default function MapView(props: {
         }
         const meanCoordinates = [lon_sum / count, lat_sum / count];
 
-        var text_value = feature.properties![props.selectedAttr] || 0;
-        if (props.selectedAttr === 'yield_target') {
+        var text_value = feature.properties![currentAttr] || 0;
+        if (currentAttr === 'yield_target') {
           text_value = text_value.toFixed(2) + ' bu/acre';
         }
         else {
@@ -301,7 +308,7 @@ export default function MapView(props: {
         }
       } catch {} 
     };
-  }, [cfg.url, cfg.center, props.currentField, props.selectedAttr]);
+  }, [cfg.url, cfg.center, props.currentField]);
 
   // update fill color on attribute change for all layers
   useEffect(() => {
