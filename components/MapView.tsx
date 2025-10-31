@@ -145,74 +145,46 @@ function addMapLayers(
   });
 }
 
+function createInterpolatePaint(
+  attribute: string,
+  stops: number[],
+  colors: string[]
+): any {
+  if (stops.length !== colors.length) {
+    throw new Error('Stops and colors arrays must have the same length');
+  }
+
+  const expression: any[] = [
+    'interpolate',
+    ['linear'],
+    ['coalesce', ['to-number', ['get', attribute]], 0]
+  ];
+
+  for (let i = 0; i < stops.length; i++) {
+    expression.push(stops[i], colors[i]);
+  }
+
+  return expression;
+}
+
 function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
+  
   if (attribute === 'yield_target') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#a50426',
-      125, '#fefdbd',
-      250, '#016937'
-    ] as any;
+    return createInterpolatePaint(attribute, [0, 125, 250], ['#a50426', '#fefdbd', '#016937']);
   }
-  else if (attribute === 'N_in_soil') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#f5fbf4',
-      250, '#054419'
-    ] as any;
+  else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
+    return createInterpolatePaint(attribute, [0, 250], ['#f5fbf4', '#054419']);
   }
-  else if (attribute === 'P_in_soil') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#fbfbfd',
-      250, '#3b0379'
-    ] as any;
+  else if (attribute === 'P_in_soil' || attribute === 'P_to_apply') {
+    return createInterpolatePaint(attribute, [0, 250], ['#fbfbfd', '#3b0379']);
   }
-  else if (attribute === 'K_in_soil') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#f6faff',
-      250, '#08316e'
-    ] as any;
+  else if (attribute === 'K_in_soil' || attribute === 'K_to_apply') {
+    return createInterpolatePaint(attribute, [0, 250], ['#f6faff', '#08316e']);
   }
-  else if (attribute === 'N_to_apply') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#f5fbf4',
-      250, '#054419'
-    ] as any;
-  }
-  else if (attribute === 'P_to_apply') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#fbfbfd',
-      250, '#3b0379'
-    ] as any;
-  }
-  else if (attribute === 'K_to_apply') {
-    return [
-      'interpolate', ['linear'],
-      ['coalesce', ['to-number', ['get', attribute]], 0],
-      0, '#f6faff',
-      250, '#08316e'
-    ] as any;
-  }
-  return [
-    'interpolate', ['linear'],
-    ['coalesce', ['to-number', ['get', attribute]], 0],
-    0, '#f1f8e9',
-    25, '#c8e6c9',
-    50, '#81c784',
-    75, '#4caf50',
-    100, '#2e7d32'
-  ] as any;
+  
+  // Default fallback
+  return createInterpolatePaint(attribute, [0, 25, 50, 75, 100], ['#f1f8e9', '#c8e6c9', '#81c784', '#4caf50', '#2e7d32']);
 }
 
 export default function MapView(props: {
