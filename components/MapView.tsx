@@ -21,13 +21,14 @@ function getSourceConfigForField(fieldName: string) {
     case 'north of road':
       return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
     case 'south of road':
-      return { url: 'mapbox://zeumer.8d46889j', center: [-86.683, 32.422] as [number, number] };
+      return { url: 'mapbox://zeumer.8d46889j', center: [-86.686834, 32.423013] as [number, number] };
     case 'railroad pivot':
       return { url: 'mapbox://zeumer.2tepd0uh', center: [-86.376, 32.416] as [number, number] };
     default:
       return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
   }
 }
+
 
 function getLayerNamesForField(fieldName: string) {
   const field = (fieldName || '').toLowerCase();
