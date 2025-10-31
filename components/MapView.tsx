@@ -6,6 +6,73 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
 
+// Color constants for nutrients
+const COLORS = {
+  // Yield target colors (red -> yellow -> green gradient)
+  YIELD_LOW: '#a50426',      // Red - low yield
+  YIELD_MID: '#fefdbd',      // Yellow - medium yield
+  YIELD_HIGH: '#016937',     // Green - high yield
+  
+  // Nitrogen (N) colors (light green -> dark green gradient)
+  N_LIGHT: '#f5fbf4',        // Light green - low N
+  N_DARK: '#054419',         // Dark green - high N
+  
+  // Phosphorus (P) colors (light purple -> dark purple gradient)
+  P_LIGHT: '#fbfbfd',        // Light purple - low P
+  P_DARK: '#3b0379',         // Dark purple - high P
+  
+  // Potassium (K) colors (light blue -> dark blue gradient)
+  K_LIGHT: '#f6faff',        // Light blue - low K
+  K_DARK: '#08316e',         // Dark blue - high K
+  
+  // Default/fallback colors
+  DEFAULT_LIGHT: '#f1f8e9',
+  DEFAULT_MID_1: '#c8e6c9',
+  DEFAULT_MID_2: '#81c784',
+  DEFAULT_MID_3: '#4caf50',
+  DEFAULT_DARK: '#2e7d32',
+  
+  // Line/stroke colors
+  LINE_COLOR: '#0f0f0f',
+  
+  // White/transparent
+  WHITE: '#ffffff'
+} as const;
+
+// Field name constants
+export const FIELD_NAMES = {
+  NORTH_OF_ROAD: 'North of Road',
+  SOUTH_OF_ROAD: 'South of Road',
+  RAILROAD_PIVOT: 'Railroad Pivot'
+} as const;
+
+// Mapbox URL constants for each field
+const MAPBOX_URLS = {
+  NORTH_OF_ROAD: 'mapbox://zeumer.bofg9ncj',
+  SOUTH_OF_ROAD: 'mapbox://zeumer.8d46889j',
+  RAILROAD_PIVOT: 'mapbox://zeumer.2tepd0uh'
+} as const;
+
+// Map center coordinates for each field [longitude, latitude]
+const FIELD_CENTERS = {
+  NORTH_OF_ROAD: [-86.684316, 32.431793] as [number, number],
+  SOUTH_OF_ROAD: [-86.686834, 32.423013] as [number, number],
+  RAILROAD_PIVOT: [-86.376, 32.416] as [number, number]
+} as const;
+
+// Layer name suffixes
+const LAYER_SUFFIXES = {
+  HIGHRES: 'highres',
+  MEDIUMRES: 'mediumres',
+  BOUNDARIESSHP: 'boundariesshp'
+} as const;
+
+// Map layer styling constants
+const MAP_STYLE = {
+  FILL_OPACITY: 0.8,        // Fill layer opacity (0.0 to 1.0)
+  LINE_WIDTH: 0.0001        // Line/stroke width for boundaries
+} as const;
+
 // GeoJSON geometry types
 type GeoJSONPolygon = {
   type: 'Polygon';
@@ -28,14 +95,14 @@ function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-ne
 
 function getSourceConfigForField(fieldName: string) {
   switch ((fieldName || '').toLowerCase()) {
-    case 'north of road':
-      return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
-    case 'south of road':
-      return { url: 'mapbox://zeumer.8d46889j', center: [-86.686834, 32.423013] as [number, number] };
-    case 'railroad pivot':
-      return { url: 'mapbox://zeumer.2tepd0uh', center: [-86.376, 32.416] as [number, number] };
+    case FIELD_NAMES.NORTH_OF_ROAD.toLowerCase():
+      return { url: MAPBOX_URLS.NORTH_OF_ROAD, center: FIELD_CENTERS.NORTH_OF_ROAD };
+    case FIELD_NAMES.SOUTH_OF_ROAD.toLowerCase():
+      return { url: MAPBOX_URLS.SOUTH_OF_ROAD, center: FIELD_CENTERS.SOUTH_OF_ROAD };
+    case FIELD_NAMES.RAILROAD_PIVOT.toLowerCase():
+      return { url: MAPBOX_URLS.RAILROAD_PIVOT, center: FIELD_CENTERS.RAILROAD_PIVOT };
     default:
-      return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
+      return { url: MAPBOX_URLS.NORTH_OF_ROAD, center: FIELD_CENTERS.NORTH_OF_ROAD };
   }
 }
 
@@ -45,13 +112,13 @@ function getLayerNamesForField(fieldName: string) {
   let baseName = '';
   
   switch (field) {
-    case 'north of road':
+    case FIELD_NAMES.NORTH_OF_ROAD.toLowerCase():
       baseName = 'northofroad';
       break;
-    case 'south of road':
+    case FIELD_NAMES.SOUTH_OF_ROAD.toLowerCase():
       baseName = 'southofroad';
       break;
-    case 'railroad pivot':
+    case FIELD_NAMES.RAILROAD_PIVOT.toLowerCase():
       baseName = 'railroadpivot';
       break;
     default:
@@ -59,34 +126,34 @@ function getLayerNamesForField(fieldName: string) {
   }
 
   return {
-    highres: `${baseName}highres`,
-    mediumres: `${baseName}mediumres`,
-    boundariesshp: 'boundariesshp'
+    highres: `${baseName}${LAYER_SUFFIXES.HIGHRES}`,
+    mediumres: `${baseName}${LAYER_SUFFIXES.MEDIUMRES}`,
+    boundariesshp: LAYER_SUFFIXES.BOUNDARIESSHP
   };
 }
 
 function getLegendInfo(attribute: string | null) {
-  if (!attribute) return { colors: ['#ffffff', '#ffffff'], min: 0, max: 0 };
+  if (!attribute) return { colors: [COLORS.WHITE, COLORS.WHITE], min: 0, max: 0 };
   
   if (attribute === 'yield_target') {
-    return { colors: ['#a50426', '#fefdbd', '#016937'], stops: [0, 125, 250], min: 0, max: 250 };
+    return { colors: [COLORS.YIELD_LOW, COLORS.YIELD_MID, COLORS.YIELD_HIGH], stops: [0, 125, 250], min: 0, max: 250 };
   }
   else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
-    return { colors: ['#f5fbf4', '#054419'], stops: [0, 250], min: 0, max: 288 };
+    return { colors: [COLORS.N_LIGHT, COLORS.N_DARK], stops: [0, 250], min: 0, max: 288 };
   }
   else if (attribute === 'P_in_soil') {
-    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 600], min: 0, max: 600 };
+    return { colors: [COLORS.P_LIGHT, COLORS.P_DARK], stops: [0, 600], min: 0, max: 600 };
   }
   else if (attribute === 'P_to_apply') {
-    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 175], min: 0, max: 175 };
+    return { colors: [COLORS.P_LIGHT, COLORS.P_DARK], stops: [0, 175], min: 0, max: 175 };
   }
   else if (attribute === 'K_in_soil') {
-    return { colors: ['#f6faff', '#08316e'], stops: [0, 400], min: 0, max: 400 };
+    return { colors: [COLORS.K_LIGHT, COLORS.K_DARK], stops: [0, 400], min: 0, max: 400 };
   }
   else if (attribute === 'K_to_apply') {
-    return { colors: ['#f6faff', '#08316e'], stops: [0, 150], min: 0, max: 150 };
+    return { colors: [COLORS.K_LIGHT, COLORS.K_DARK], stops: [0, 150], min: 0, max: 150 };
   }
-  return { colors: ['#f1f8e9', '#2e7d32'], stops: [0, 100], min: 0, max: 100 };
+  return { colors: [COLORS.DEFAULT_LIGHT, COLORS.DEFAULT_DARK], stops: [0, 100], min: 0, max: 100 };
 }
 
 function addMapLayers(
@@ -109,39 +176,39 @@ function addMapLayers(
   map.addLayer({
     id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
     filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
   });
   
   map.addLayer({
     id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
     filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
+    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
   });
   
   // Add mediumres layer
   map.addLayer({
     id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
     filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
   });
   
   map.addLayer({
     id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
     filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': '#0f0f0f', 'line-width': .0001 }
+    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
   });
   
   // Add boundariesshp layer
   map.addLayer({
     id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
     filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': 0.8 }
+    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
   });
   
   map.addLayer({
     id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
     filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': '#0f0f0f', 'line-width': 0.0001 }
+    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
   });
 }
 
@@ -171,20 +238,26 @@ function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
   
   if (attribute === 'yield_target') {
-    return createInterpolatePaint(attribute, [0, 125, 250], ['#a50426', '#fefdbd', '#016937']);
+    return createInterpolatePaint(attribute, [0, 125, 250], [COLORS.YIELD_LOW, COLORS.YIELD_MID, COLORS.YIELD_HIGH]);
   }
   else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
-    return createInterpolatePaint(attribute, [0, 250], ['#f5fbf4', '#054419']);
+    return createInterpolatePaint(attribute, [0, 250], [COLORS.N_LIGHT, COLORS.N_DARK]);
   }
   else if (attribute === 'P_in_soil' || attribute === 'P_to_apply') {
-    return createInterpolatePaint(attribute, [0, 250], ['#fbfbfd', '#3b0379']);
+    return createInterpolatePaint(attribute, [0, 250], [COLORS.P_LIGHT, COLORS.P_DARK]);
   }
   else if (attribute === 'K_in_soil' || attribute === 'K_to_apply') {
-    return createInterpolatePaint(attribute, [0, 250], ['#f6faff', '#08316e']);
+    return createInterpolatePaint(attribute, [0, 250], [COLORS.K_LIGHT, COLORS.K_DARK]);
   }
   
   // Default fallback
-  return createInterpolatePaint(attribute, [0, 25, 50, 75, 100], ['#f1f8e9', '#c8e6c9', '#81c784', '#4caf50', '#2e7d32']);
+  return createInterpolatePaint(attribute, [0, 25, 50, 75, 100], [
+    COLORS.DEFAULT_LIGHT,
+    COLORS.DEFAULT_MID_1,
+    COLORS.DEFAULT_MID_2,
+    COLORS.DEFAULT_MID_3,
+    COLORS.DEFAULT_DARK
+  ]);
 }
 
 export default function MapView(props: {
@@ -303,7 +376,7 @@ export default function MapView(props: {
     
     try {
       const paintColor = buildFillPaint(props.selectedAttr);
-      const paintOpacity = props.selectedAttr ? 0.8 : 0.0;
+      const paintOpacity = props.selectedAttr ? MAP_STYLE.FILL_OPACITY : 0.0;
       
       // Update all three resolution layers
       const layerIds = [

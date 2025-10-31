@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import styles from './pageStyles';
+import { FIELD_NAMES } from '../components/MapView';
 
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
@@ -63,7 +64,7 @@ export default function Page() {
                 </tr>
               </thead>
               <tbody>
-                {[['North of Road','Corn'],['South of Road','Corn'],['Railroad Pivot','Corn']].map(([name,crop]) => (
+                {[[FIELD_NAMES.NORTH_OF_ROAD,'Corn'],[FIELD_NAMES.SOUTH_OF_ROAD,'Corn'],[FIELD_NAMES.RAILROAD_PIVOT,'Corn']].map(([name,crop]) => (
                   <tr key={name} style={styles.tableTr} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <td style={{...styles.tableTd, ...styles.fieldName}}>{name}</td>
                     <td style={{...styles.tableTd, ...styles.cropType}}>{crop}</td>
