@@ -73,6 +73,58 @@ const MAP_STYLE = {
   LINE_WIDTH: 0.0001        // Line/stroke width for boundaries
 } as const;
 
+// Legend configuration constants
+const LEGEND_CONFIG = {
+  YIELD: {
+    colors: [COLORS.YIELD_LOW, COLORS.YIELD_MID, COLORS.YIELD_HIGH],
+    stops: [0, 125, 250],
+    min: 0,
+    max: 250
+  },
+  N_SOIL: {
+    colors: [COLORS.N_LIGHT, COLORS.N_DARK],
+    stops: [0, 250],
+    min: 0,
+    max: 288
+  },
+  N_APPLY: {
+    colors: [COLORS.N_LIGHT, COLORS.N_DARK],
+    stops: [0, 250],
+    min: 0,
+    max: 288
+  },
+  P_SOIL: {
+    colors: [COLORS.P_LIGHT, COLORS.P_DARK],
+    stops: [0, 600],
+    min: 0,
+    max: 600
+  },
+  P_APPLY: {
+    colors: [COLORS.P_LIGHT, COLORS.P_DARK],
+    stops: [0, 175],
+    min: 0,
+    max: 175
+  },
+  K_SOIL: {
+    colors: [COLORS.K_LIGHT, COLORS.K_DARK],
+    stops: [0, 400],
+    min: 0,
+    max: 400
+  },
+  K_APPLY: {
+    colors: [COLORS.K_LIGHT, COLORS.K_DARK],
+    stops: [0, 150],
+    min: 0,
+    max: 150
+  },
+  DEFAULT: {
+    colors: [COLORS.DEFAULT_LIGHT, COLORS.DEFAULT_DARK],
+    stops: [0, 100],
+    min: 0,
+    max: 100
+  }
+} as const;
+
 // GeoJSON geometry types
 type GeoJSONPolygon = {
   type: 'Polygon';
@@ -132,28 +184,37 @@ function getLayerNamesForField(fieldName: string) {
   };
 }
 
+// Legend configuration type
+type LegendConfig = {
+  colors: readonly string[];
+  stops: readonly number[];
+  min: number;
+  max: number;
+};
+
+// Legend configuration lookup map
+const LEGEND_LOOKUP: Record<string, LegendConfig> = {
+  'yield_target': LEGEND_CONFIG.YIELD,
+  'N_in_soil': LEGEND_CONFIG.N_SOIL,
+  'N_to_apply': LEGEND_CONFIG.N_APPLY,
+  'P_in_soil': LEGEND_CONFIG.P_SOIL,
+  'P_to_apply': LEGEND_CONFIG.P_APPLY,
+  'K_in_soil': LEGEND_CONFIG.K_SOIL,
+  'K_to_apply': LEGEND_CONFIG.K_APPLY
+};
+
 function getLegendInfo(attribute: string | null) {
-  if (!attribute) return { colors: [COLORS.WHITE, COLORS.WHITE], min: 0, max: 0 };
+  if (!attribute) {
+    return { colors: [COLORS.WHITE, COLORS.WHITE], stops: [0, 0], min: 0, max: 0 };
+  }
   
-  if (attribute === 'yield_target') {
-    return { colors: [COLORS.YIELD_LOW, COLORS.YIELD_MID, COLORS.YIELD_HIGH], stops: [0, 125, 250], min: 0, max: 250 };
-  }
-  else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
-    return { colors: [COLORS.N_LIGHT, COLORS.N_DARK], stops: [0, 250], min: 0, max: 288 };
-  }
-  else if (attribute === 'P_in_soil') {
-    return { colors: [COLORS.P_LIGHT, COLORS.P_DARK], stops: [0, 600], min: 0, max: 600 };
-  }
-  else if (attribute === 'P_to_apply') {
-    return { colors: [COLORS.P_LIGHT, COLORS.P_DARK], stops: [0, 175], min: 0, max: 175 };
-  }
-  else if (attribute === 'K_in_soil') {
-    return { colors: [COLORS.K_LIGHT, COLORS.K_DARK], stops: [0, 400], min: 0, max: 400 };
-  }
-  else if (attribute === 'K_to_apply') {
-    return { colors: [COLORS.K_LIGHT, COLORS.K_DARK], stops: [0, 150], min: 0, max: 150 };
-  }
-  return { colors: [COLORS.DEFAULT_LIGHT, COLORS.DEFAULT_DARK], stops: [0, 100], min: 0, max: 100 };
+  const config = LEGEND_LOOKUP[attribute] || LEGEND_CONFIG.DEFAULT;
+  return {
+    colors: config.colors,
+    stops: config.stops,
+    min: config.min,
+    max: config.max
+  };
 }
 
 function addResolutionLayers(
