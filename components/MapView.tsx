@@ -61,13 +61,19 @@ function getLegendInfo(attribute: string | null) {
     return { colors: ['#a50426', '#fefdbd', '#016937'], stops: [0, 125, 250], min: 0, max: 250 };
   }
   else if (attribute === 'N_in_soil' || attribute === 'N_to_apply') {
-    return { colors: ['#f5fbf4', '#054419'], stops: [0, 250], min: 0, max: 250 };
+    return { colors: ['#f5fbf4', '#054419'], stops: [0, 250], min: 0, max: 288 };
   }
-  else if (attribute === 'P_in_soil' || attribute === 'P_to_apply') {
-    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 250], min: 0, max: 250 };
+  else if (attribute === 'P_in_soil') {
+    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 600], min: 0, max: 600 };
   }
-  else if (attribute === 'K_in_soil' || attribute === 'K_to_apply') {
-    return { colors: ['#f6faff', '#08316e'], stops: [0, 250], min: 0, max: 250 };
+  else if (attribute === 'P_to_apply') {
+    return { colors: ['#fbfbfd', '#3b0379'], stops: [0, 175], min: 0, max: 175 };
+  }
+  else if (attribute === 'K_in_soil') {
+    return { colors: ['#f6faff', '#08316e'], stops: [0, 400], min: 0, max: 400 };
+  }
+  else if (attribute === 'K_to_apply') {
+    return { colors: ['#f6faff', '#08316e'], stops: [0, 150], min: 0, max: 150 };
   }
   return { colors: ['#f1f8e9', '#2e7d32'], stops: [0, 100], min: 0, max: 100 };
 }
