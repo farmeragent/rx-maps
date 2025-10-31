@@ -7,12 +7,12 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
 
 function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-needed'|'k-needed') {
-  if (n === 'n-current') return 'Nitrogen';
-  if (n === 'p-current') return 'Phosphorus';
-  if (n === 'k-current') return 'Potassium';
-  if (n === 'n-needed') return 'Nitrogen';
-  if (n === 'p-needed') return 'Phosphorus';
-  return 'Potassium';
+  if (n === 'n-current') return 'Nitrogen (N)';
+  if (n === 'p-current') return 'Phosphorus (P)';
+  if (n === 'k-current') return 'Potassium (K)';
+  if (n === 'n-needed') return 'Nitrogen (N)';
+  if (n === 'p-needed') return 'Phosphorus (P)';
+  return 'Potassium (K)';
 }
 
 function getSourceConfigForField(fieldName: string) {
