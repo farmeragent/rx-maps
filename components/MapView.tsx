@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -19,14 +19,39 @@ function getSourceConfigForField(fieldName: string) {
   console.log("here")
   switch ((fieldName || '').toLowerCase()) {
     case 'north of road':
-      return { url: 'mapbox://zeumer.bofg9ncj', layer: 'northofroadhighres', center: [-86.684316, 32.431793] as [number, number] };
+      return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
     case 'south of road':
-      return { url: 'mapbox://zeumer.8d46889j', layer: 'southofroadhighres', center: [-86.683, 32.422] as [number, number] };
+      return { url: 'mapbox://zeumer.8d46889j', center: [-86.683, 32.422] as [number, number] };
     case 'railroad pivot':
-      return { url: 'mapbox://zeumer.2tepd0uh', layer: 'railroadpivothighres', center: [-86.376, 32.416] as [number, number] };
+      return { url: 'mapbox://zeumer.2tepd0uh', center: [-86.376, 32.416] as [number, number] };
     default:
-      return { url: 'mapbox://zeumer.bofg9ncj', layer: 'northofroadhighres', center: [-86.684316, 32.431793] as [number, number] };
+      return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
   }
+}
+
+function getLayerNamesForField(fieldName: string) {
+  const field = (fieldName || '').toLowerCase();
+  let baseName = '';
+  
+  switch (field) {
+    case 'north of road':
+      baseName = 'northofroad';
+      break;
+    case 'south of road':
+      baseName = 'southofroad';
+      break;
+    case 'railroad pivot':
+      baseName = 'railroadpivot';
+      break;
+    default:
+      baseName = 'northofroad';
+  }
+
+  return {
+    highres: `${baseName}highres`,
+    mediumres: `${baseName}mediumres`,
+    boundariesshp: 'boundariesshp'
+  };
 }
 
 function buildFillPaint(attribute: string | null) {
@@ -113,8 +138,10 @@ export default function MapView(props: {
 }) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapNode = useRef<HTMLDivElement | null>(null);
+  const [zoom, setZoom] = useState<number>(15);
 
   const cfg = useMemo(() => getSourceConfigForField(props.currentField), [props.currentField]);
+  const layerNames = useMemo(() => getLayerNamesForField(props.currentField), [props.currentField]);
 
   useEffect(() => {
     if (!mapNode.current) return;
@@ -135,31 +162,67 @@ export default function MapView(props: {
       zoom: 15
     });
     mapRef.current = map;
+    setZoom(15);
 
     map.on('load', () => {
       try {
         // source
         if (map.getSource('data-source')) map.removeSource('data-source');
         map.addSource('data-source', { type: 'vector', url: cfg.url });
-
-        // layers
-        if (map.getLayer('data-fill')) map.removeLayer('data-fill');
-        if (map.getLayer('data-line')) map.removeLayer('data-line');
-
+        
+        // Remove existing layers if any
+        if (map.getLayer('data-fill-highres')) map.removeLayer('data-fill-highres');
+        if (map.getLayer('data-line-highres')) map.removeLayer('data-line-highres');
+        if (map.getLayer('data-fill-mediumres')) map.removeLayer('data-fill-mediumres');
+        if (map.getLayer('data-line-mediumres')) map.removeLayer('data-line-mediumres');
+        if (map.getLayer('data-fill-boundariesshp')) map.removeLayer('data-fill-boundariesshp');
+        if (map.getLayer('data-line-boundariesshp')) map.removeLayer('data-line-boundariesshp');
+        
+        // Add highres layer
         map.addLayer({
-          id: 'data-fill', type: 'fill', source: 'data-source', 'source-layer': cfg.layer,
+          id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
           filter: ['==', ['geometry-type'], 'Polygon'],
           paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.8 }
         });
-
+        
         map.addLayer({
-          id: 'data-line', type: 'line', source: 'data-source', 'source-layer': cfg.layer,
+          id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
+          filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+          paint: { 'line-color': '#ffffff', 'line-width': 1 }
+        });
+        
+        // Add mediumres layer
+        map.addLayer({
+          id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+        });
+        
+        map.addLayer({
+          id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
+          filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+          paint: { 'line-color': '#ffffff', 'line-width': 1 }
+        });
+        
+        // Add boundariesshp layer
+        map.addLayer({
+          id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+        });
+        
+        map.addLayer({
+          id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
           filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
           paint: { 'line-color': '#0f0f0f', 'line-width': 0.0001 }
         });
       } catch (error) {
         console.error('Error loading map layers:', error);
       }
+    });
+
+    map.on('zoom', () => {
+      setZoom(map.getZoom());
     });
 
     return () => { 
@@ -170,19 +233,94 @@ export default function MapView(props: {
         }
       } catch {} 
     };
-  }, [cfg.url, cfg.layer, cfg.center, props.selectedAttr]);
+  }, [cfg.url, cfg.center, props.currentField]);
 
-  // update fill color on attribute change
+  // update fill color on attribute change for all layers
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !map.getLayer('data-fill')) return;
+    if (!map || !map.isStyleLoaded()) return;
+    
     try {
-      map.setPaintProperty('data-fill', 'fill-color', buildFillPaint(props.selectedAttr) as any);
-      map.setPaintProperty('data-fill', 'fill-opacity', props.selectedAttr ? 0.6 : 0.0);
+      const paintColor = buildFillPaint(props.selectedAttr);
+      const paintOpacity = props.selectedAttr ? 0.6 : 0.0;
+      
+      // Update all three resolution layers
+      const layerIds = [
+        'data-fill-highres',
+        'data-fill-mediumres',
+        'data-fill-boundariesshp'
+      ];
+      
+      layerIds.forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, 'fill-color', paintColor as any);
+          map.setPaintProperty(layerId, 'fill-opacity', paintOpacity);
+        }
+      });
     } catch (error) {
       console.error('Error updating paint property:', error);
     }
   }, [props.selectedAttr]);
+
+  // update layers when field changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !map.getSource('data-source')) return;
+    
+    try {
+      // Remove existing layers
+      const layerIds = [
+        'data-fill-highres', 'data-line-highres',
+        'data-fill-mediumres', 'data-line-mediumres',
+        'data-fill-boundariesshp', 'data-line-boundariesshp'
+      ];
+      
+      layerIds.forEach(layerId => {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+      });
+
+      // Add highres layer
+      map.addLayer({
+        id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+      });
+      
+      map.addLayer({
+        id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
+        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+      });
+      
+      // Add mediumres layer
+      map.addLayer({
+        id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+      });
+      
+      map.addLayer({
+        id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
+        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+      });
+      
+      // Add boundariesshp layer
+      map.addLayer({
+        id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': buildFillPaint(props.selectedAttr) as any, 'fill-opacity': 0.6 }
+      });
+      
+      map.addLayer({
+        id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
+        filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+        paint: { 'line-color': '#ffffff', 'line-width': 1 }
+      });
+    } catch (error) {
+      console.error('Error updating layer:', error);
+    }
+  }, [layerNames, props.selectedAttr]);
 
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
