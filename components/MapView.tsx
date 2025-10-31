@@ -156,6 +156,42 @@ function getLegendInfo(attribute: string | null) {
   return { colors: [COLORS.DEFAULT_LIGHT, COLORS.DEFAULT_DARK], stops: [0, 100], min: 0, max: 100 };
 }
 
+function addResolutionLayers(
+  map: mapboxgl.Map,
+  resolution: string,
+  sourceLayerName: string,
+  selectedAttr: string | null
+) {
+  const fillLayerId = `data-fill-${resolution}`;
+  const lineLayerId = `data-line-${resolution}`;
+
+  // Add fill layer
+  map.addLayer({
+    id: fillLayerId,
+    type: 'fill',
+    source: 'data-source',
+    'source-layer': sourceLayerName,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: {
+      'fill-color': buildFillPaint(selectedAttr) as any,
+      'fill-opacity': MAP_STYLE.FILL_OPACITY
+    }
+  });
+
+  // Add line layer
+  map.addLayer({
+    id: lineLayerId,
+    type: 'line',
+    source: 'data-source',
+    'source-layer': sourceLayerName,
+    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
+    paint: {
+      'line-color': COLORS.LINE_COLOR,
+      'line-width': MAP_STYLE.LINE_WIDTH
+    }
+  });
+}
+
 function addMapLayers(
   map: mapboxgl.Map,
   layerNames: { highres: string; mediumres: string; boundariesshp: string },
@@ -172,44 +208,10 @@ function addMapLayers(
     if (map.getLayer(layerId)) map.removeLayer(layerId);
   });
 
-  // Add highres layer
-  map.addLayer({
-    id: 'data-fill-highres', type: 'fill', source: 'data-source', 'source-layer': layerNames.highres,
-    filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
-  });
-  
-  map.addLayer({
-    id: 'data-line-highres', type: 'line', source: 'data-source', 'source-layer': layerNames.highres,
-    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
-  });
-  
-  // Add mediumres layer
-  map.addLayer({
-    id: 'data-fill-mediumres', type: 'fill', source: 'data-source', 'source-layer': layerNames.mediumres,
-    filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
-  });
-  
-  map.addLayer({
-    id: 'data-line-mediumres', type: 'line', source: 'data-source', 'source-layer': layerNames.mediumres,
-    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
-  });
-  
-  // Add boundariesshp layer
-  map.addLayer({
-    id: 'data-fill-boundariesshp', type: 'fill', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-    filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': buildFillPaint(selectedAttr) as any, 'fill-opacity': MAP_STYLE.FILL_OPACITY }
-  });
-  
-  map.addLayer({
-    id: 'data-line-boundariesshp', type: 'line', source: 'data-source', 'source-layer': layerNames.boundariesshp,
-    filter: ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']],
-    paint: { 'line-color': COLORS.LINE_COLOR, 'line-width': MAP_STYLE.LINE_WIDTH }
-  });
+  // Add layers for each resolution
+  addResolutionLayers(map, 'highres', layerNames.highres, selectedAttr);
+  addResolutionLayers(map, 'mediumres', layerNames.mediumres, selectedAttr);
+  addResolutionLayers(map, 'boundariesshp', layerNames.boundariesshp, selectedAttr);
 }
 
 function createInterpolatePaint(
