@@ -16,7 +16,6 @@ function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-ne
 }
 
 function getSourceConfigForField(fieldName: string) {
-  console.log("here")
   switch ((fieldName || '').toLowerCase()) {
     case 'north of road':
       return { url: 'mapbox://zeumer.bofg9ncj', center: [-86.684316, 32.431793] as [number, number] };
@@ -57,7 +56,6 @@ function getLayerNamesForField(fieldName: string) {
 
 function buildFillPaint(attribute: string | null) {
   if (!attribute) return ['rgba', 0, 0, 0, 0] as any;
-  console.log(attribute)
   if (attribute === 'yield_target') {
     return [
       'interpolate', ['linear'],
@@ -228,6 +226,47 @@ export default function MapView(props: {
       setZoom(map.getZoom());
     });
 
+    map.on('click', (event: mapboxgl.MapMouseEvent) => {
+      // If the user clicked on one of your markers, get its information.
+      const features = map.queryRenderedFeatures(event.point, {
+        layers: ['data-fill-highres', 'data-fill-mediumres'] // replace with your layer name
+      });
+      if (!features.length) {
+        return;
+      }
+      if (!props.selectedAttr) {
+        return;
+      }
+      const feature = features[0];
+
+      if ("coordinates" in feature.geometry) {
+        const coordinates = (feature.geometry as Point | Polygon | LineString).coordinates;
+        let lat_sum = 0;
+        let lon_sum = 0;
+        let count = 0;
+        for (const coordinate of coordinates[0] as [number, number][]) {
+          lat_sum += coordinate[1];
+          lon_sum += coordinate[0];
+          count++;
+        }
+        const meanCoordinates = [lon_sum / count, lat_sum / count];
+
+        var text_value = feature.properties![props.selectedAttr] || 0;
+        if (props.selectedAttr === 'yield_target') {
+          text_value = text_value.toFixed(2) + ' bu/acre';
+        }
+        else {
+          text_value = text_value.toFixed(2) + ' lbs/acre';
+        }
+
+        new mapboxgl.Popup({ offset: [0, -15] })
+          .setLngLat(meanCoordinates as [number, number])
+          .setHTML(
+          `<h3>${text_value}</h3>`
+          )
+          .addTo(map);
+      }
+    });
     return () => { 
       try { 
         if (mapRef.current) {
@@ -236,7 +275,7 @@ export default function MapView(props: {
         }
       } catch {} 
     };
-  }, [cfg.url, cfg.center, props.currentField]);
+  }, [cfg.url, cfg.center, props.currentField, props.selectedAttr]);
 
   // update fill color on attribute change for all layers
   useEffect(() => {
