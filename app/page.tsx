@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import styles from './pageStyles';
 import { FIELD_NAMES } from '../constants';
@@ -10,12 +10,29 @@ const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning';
 
+type Phase = 'pre-plant' | 'plant' | 'post-plant';
+
+interface PassTile {
+  id: string;
+  passNumber: string;
+  machine: string;
+  fertilizerType: string;
+}
+
+interface PhaseData {
+  passes: PassTile[];
+}
+
+type TimelineData = Record<Phase, PhaseData>;
+
 export default function Page() {
   const [currentField, setCurrentField] = useState<string>('');
   const [page, setPage] = useState<PageKey>('fields');
   const [nutrientCurrent, setNutrientCurrent] = useState<'n-current'|'p-current'|'k-current'>('n-current');
   const [nutrientNeeded, setNutrientNeeded] = useState<'n-needed'|'p-needed'|'k-needed'>('n-needed');
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { yieldGoal?: File; soilSample?: File }>>({});
+  const [allPasses, setAllPasses] = useState<PassTile[]>([]);
+  const [selectedPass, setSelectedPass] = useState<PassTile | null>(null);
 
   const selectedAttr = useMemo(() => {
     if (page === 'yield') return 'yield_target';
@@ -60,6 +77,36 @@ export default function Page() {
       }));
     }
   }
+
+  // Fetch all passes from Edge Config
+  useEffect(() => {
+    async function fetchPasses() {
+      try {
+        const response = await fetch('/api/passes');
+        if (!response.ok) {
+          throw new Error('Failed to fetch passes');
+        }
+        const data: TimelineData = await response.json();
+        
+        // Flatten all passes from all phases into a single array
+        const passes: PassTile[] = [
+          ...(data['pre-plant']?.passes || []),
+          ...(data['plant']?.passes || []),
+          ...(data['post-plant']?.passes || [])
+        ];
+        
+        setAllPasses(passes);
+      } catch (error) {
+        console.error('Error fetching passes:', error);
+        setAllPasses([]);
+      }
+    }
+
+    // Fetch on mount and when returning to fields page
+    if (page === 'fields') {
+      fetchPasses();
+    }
+  }, [page]);
 
   return (
     <div style={styles.appRoot}>
@@ -133,22 +180,47 @@ export default function Page() {
                         </label>
                       </td>
                       <td style={styles.tableTd}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {[1, 2, 3].map((num) => (
-                            <button
-                              key={num}
-                              style={{
-                                ...styles.primaryBtn,
-                                padding: '8px 12px',
-                                fontSize: '12px',
-                                minWidth: '36px'
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-                            >
-                              {num}
-                            </button>
-                          ))}
+                        <div style={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: '32px'
+                        }}>
+                          {allPasses.length === 0 ? (
+                            <span style={{
+                              fontSize: '14px',
+                              color: '#7f8c8d',
+                              fontStyle: 'italic'
+                            }}>
+                              No passes
+                            </span>
+                          ) : (
+                            allPasses.map((pass) => (
+                              <button
+                                key={pass.id}
+                                style={{
+                                  ...styles.primaryBtn,
+                                  padding: '8px 12px',
+                                  fontSize: '12px',
+                                  minWidth: '40px',
+                                  position: 'relative'
+                                }}
+                                onClick={() => setSelectedPass(pass)}
+                                onMouseEnter={(e) => { 
+                                  e.currentTarget.style.transform = 'translateY(-1px)'; 
+                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; 
+                                }} 
+                                onMouseLeave={(e) => { 
+                                  e.currentTarget.style.transform = 'translateY(0)'; 
+                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; 
+                                }}
+                              >
+                                {pass.passNumber}
+                              </button>
+                            ))
+                          )}
                         </div>
                       </td>
                       <td style={styles.tableTd}>
@@ -202,6 +274,117 @@ export default function Page() {
           onBack={goBack}
           onHome={goHome}
         />
+      )}
+
+      {/* Pass Info Popup */}
+      {selectedPass && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setSelectedPass(null)}
+        >
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '15px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedPass(null)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'transparent',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#7f8c8d',
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f0f0f0';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              ×
+            </button>
+            <h3 style={{
+              margin: '0 0 20px 0',
+              color: '#2c3e50',
+              fontSize: '24px',
+              fontWeight: 600
+            }}>
+              {selectedPass.passNumber}
+            </h3>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '15px'
+            }}>
+              <div>
+                <span style={{
+                  color: '#7f8c8d',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: 'block',
+                  marginBottom: '5px'
+                }}>
+                  Fertilizer Type:
+                </span>
+                <span style={{
+                  color: '#2c3e50',
+                  fontSize: '16px',
+                  fontWeight: 400
+                }}>
+                  {selectedPass.fertilizerType || 'Not specified'}
+                </span>
+              </div>
+              <div>
+                <span style={{
+                  color: '#7f8c8d',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: 'block',
+                  marginBottom: '5px'
+                }}>
+                  Machine:
+                </span>
+                <span style={{
+                  color: '#2c3e50',
+                  fontSize: '16px',
+                  fontWeight: 400
+                }}>
+                  {selectedPass.machine || 'Not specified'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
