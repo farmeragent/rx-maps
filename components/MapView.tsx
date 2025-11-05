@@ -14,7 +14,7 @@ import {
   LEGEND_LOOKUP
 } from '../constants';
 
-type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed';
+type PageKey = 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'yield-view' | 'nutrient-capacity-view';
 
 // GeoJSON geometry types
 type GeoJSONPolygon = {
@@ -205,6 +205,8 @@ export default function MapView(props: {
   onNext: () => void;
   onBack: () => void;
   onHome: () => void;
+  hideNavigation?: boolean;
+  hideNextBack?: boolean;
 }) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapNode = useRef<HTMLDivElement | null>(null);
@@ -389,55 +391,61 @@ export default function MapView(props: {
         </div>
       )}
 
-      <div className="map-overlay-panel">
-        {props.page === 'yield' && (
-          <div className="control-panel-title">
-            Your current yield target:
-            <div className="layer-selection">
-              <div className="layer-option">
-                <input type="radio" id="yield-target" name="yield-layer" defaultChecked />
-                <label htmlFor="yield-target">Yield Target</label>
+      {!props.hideNavigation && (
+        <div className="map-overlay-panel">
+          {(props.page === 'yield' || props.page === 'yield-view') && (
+            <div className="control-panel-title">
+              Your current yield target:
+              <div className="layer-selection">
+                <div className="layer-option">
+                  <input type="radio" id="yield-target" name="yield-layer" defaultChecked />
+                  <label htmlFor="yield-target">Yield Target</label>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {props.page === 'nutrient-capacity' && (
-          <div className="control-panel-title">
-           Nutrients currently in soil: 
-          <div className="layer-selection">
-            {(['n-current','p-current','k-current'] as const).map(v => (
-              <div className="layer-option" key={v}>
-                <input type="radio" id={v} name="nutrient-current-layer" checked={props.nutrientCurrent===v} onChange={() => props.onSetNutrientCurrent(v)} />
-                <label htmlFor={v}>{getNutrientName(v)}</label>
-              </div>
-            ))}
-          </div>
-          </div>
-        )}
+          {(props.page === 'nutrient-capacity' || props.page === 'nutrient-capacity-view') && (
+            <div className="control-panel-title">
+             Nutrients currently in soil: 
+            <div className="layer-selection">
+              {(['n-current','p-current','k-current'] as const).map(v => (
+                <div className="layer-option" key={v}>
+                  <input type="radio" id={v} name="nutrient-current-layer" checked={props.nutrientCurrent===v} onChange={() => props.onSetNutrientCurrent(v)} />
+                  <label htmlFor={v}>{getNutrientName(v)}</label>
+                </div>
+              ))}
+            </div>
+            </div>
+          )}
 
-        {props.page === 'nutrient-needed' && (
-          <div className="control-panel-title">
-           Nutrients needed to reach yield target:
-          <div className="layer-selection">
-            {(['n-needed','p-needed','k-needed'] as const).map(v => (
-              <div className="layer-option" key={v}>
-                <input type="radio" id={v} name="nutrient-needed-layer" checked={props.nutrientNeeded===v} onChange={() => props.onSetNutrientNeeded(v)} />
-                <label htmlFor={v}>{getNutrientName(v)}</label>
-              </div>
-            ))}
-          </div>
-          </div>
-        )}
+          {props.page === 'nutrient-needed' && (
+            <div className="control-panel-title">
+             Nutrients needed to reach yield target:
+            <div className="layer-selection">
+              {(['n-needed','p-needed','k-needed'] as const).map(v => (
+                <div className="layer-option" key={v}>
+                  <input type="radio" id={v} name="nutrient-needed-layer" checked={props.nutrientNeeded===v} onChange={() => props.onSetNutrientNeeded(v)} />
+                  <label htmlFor={v}>{getNutrientName(v)}</label>
+                </div>
+              ))}
+            </div>
+            </div>
+          )}
 
-        <button className="panel-button" onClick={props.onBack}>← Back</button>
-        {props.page !== 'nutrient-needed' && (
-          <button className="panel-button" onClick={props.onNext}>Next →</button>
-        )}
-        {props.page === 'nutrient-needed' && (
-          <button className="download-button" onClick={() => setShowDialog(true)}>Download Rx Map</button>
-        )}
-      </div>
+          {!props.hideNextBack && (
+            <>
+              <button className="panel-button" onClick={props.onBack}>← Back</button>
+              {props.page !== 'nutrient-needed' && (
+                <button className="panel-button" onClick={props.onNext}>Next →</button>
+              )}
+              {props.page === 'nutrient-needed' && (
+                <button className="download-button" onClick={() => setShowDialog(true)}>Download Rx Map</button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {showDialog && (
         <div className="dialog-overlay" onClick={() => setShowDialog(false)}>
