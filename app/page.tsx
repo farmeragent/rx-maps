@@ -482,7 +482,7 @@ export default function Page() {
           onNext={() => setPage(page === 'yield' ? 'nutrient-capacity' : 'nutrient-needed')}
           onBack={goBack}
           onHome={goHome}
-          hideNavigation={page === 'yield-view'}
+          hideNavigation={false}
           hideNextBack={page === 'yield-view' || page === 'nutrient-capacity-view'}
         />
       )}
