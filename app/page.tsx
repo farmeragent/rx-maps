@@ -32,6 +32,17 @@ export default function Page() {
   const [nutrientCurrent, setNutrientCurrent] = useState<'n-current'|'p-current'|'k-current'>('n-current');
   const [nutrientNeeded, setNutrientNeeded] = useState<'n-needed'|'p-needed'|'k-needed'>('n-needed');
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { yieldGoal?: File; soilSample?: File }>>({});
+  
+  // Generate random costs for each field (stored in state so they don't change on re-render)
+  const [fieldCosts] = useState<Record<string, { total: number; perAcre: number }>>(() => {
+    const costs: Record<string, { total: number; perAcre: number }> = {};
+    [FIELD_NAMES.NORTH_OF_ROAD, FIELD_NAMES.SOUTH_OF_ROAD, FIELD_NAMES.RAILROAD_PIVOT].forEach(field => {
+      const total = Math.floor(Math.random() * (100000 - 50000 + 1)) + 50000;
+      const perAcre = Math.floor(Math.random() * (200 - 100 + 1)) + 100;
+      costs[field] = { total, perAcre };
+    });
+    return costs;
+  });
   const [allPasses, setAllPasses] = useState<PassTile[]>([]);
   const [selectedPass, setSelectedPass] = useState<PassTile | null>(null);
 
@@ -121,20 +132,22 @@ export default function Page() {
               <thead>
                 <tr>
                   <th style={styles.tableTh}>Field Name</th>
-                  <th style={styles.tableTh}>Crop Type</th>
                   <th style={styles.tableTh}>Yield Goal</th>
                   <th style={styles.tableTh}>Soil Sample</th>
                   <th style={styles.tableTh}>Plan</th>
-                  <th style={styles.tableTh}>Fertilization Plan</th>
+                  <th style={styles.tableTh}>Maps</th>
+                  <th style={styles.tableTh}>Total Cost</th>
+                  <th style={styles.tableTh}>Cost per acre</th>
+                  <th style={styles.tableTh}>Send map to machine</th>
                 </tr>
               </thead>
               <tbody>
                 {[[FIELD_NAMES.NORTH_OF_ROAD,'Corn'],[FIELD_NAMES.SOUTH_OF_ROAD,'Corn'],[FIELD_NAMES.RAILROAD_PIVOT,'Corn']].map(([name,crop]) => {
                   const fieldFiles = uploadedFiles[name] || {};
+                  const costs = fieldCosts[name] || { total: 75000, perAcre: 150 };
                   return (
                     <tr key={name} style={styles.tableTr} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                       <td style={{...styles.tableTd, ...styles.fieldName}}>{name}</td>
-                      <td style={{...styles.tableTd, ...styles.cropType}}>{crop}</td>
                       <td style={styles.tableTd}>
                         <label style={{ display: 'inline-block', cursor: 'pointer' }}>
                           <input
@@ -179,13 +192,13 @@ export default function Page() {
                           </button>
                         </label>
                       </td>
-                      <td style={styles.tableTd}>
+                      <td style={{...styles.tableTd, textAlign: 'left'}}>
                         <div style={{ 
                           display: 'flex', 
                           flexWrap: 'wrap',
                           gap: '8px',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: 'flex-start',
                           minHeight: '32px'
                         }}>
                           {allPasses.length === 0 ? (
@@ -224,7 +237,26 @@ export default function Page() {
                         </div>
                       </td>
                       <td style={styles.tableTd}>
-                        <button style={styles.primaryBtn} onClick={() => createPlan(name)} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}>Create Plan</button>
+                        <button style={styles.primaryBtn} onClick={() => createPlan(name)} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}>Generate Maps</button>
+                      </td>
+                      <td style={styles.tableTd}>
+                        ${costs.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </td>
+                      <td style={styles.tableTd}>
+                        ${costs.perAcre.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td style={styles.tableTd}>
+                        <button 
+                          style={{
+                            ...styles.primaryBtn,
+                            padding: '8px 16px',
+                            fontSize: '12px'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
+                        >
+                          Send
+                        </button>
                       </td>
                     </tr>
                   );
