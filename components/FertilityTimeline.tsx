@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-type Phase = 'pre-plant' | 'plant' | 'post-plant';
+type Phase = 'pre-plant' | 'post-plant';
 
 interface PassTile {
   id: string;
   passNumber: string;
   machine: string;
-  fertilizerType: string;
+  nutrientTypes: string;
+  vrRx: boolean;
 }
 
 interface PhaseData {
@@ -19,15 +20,35 @@ type TimelineData = Record<Phase, PhaseData>;
 
 const PHASE_NAMES: Record<Phase, string> = {
   'pre-plant': 'Pre-plant',
-  'plant': 'Plant',
-  'post-plant': 'Post Plant'
+  'post-plant': 'Post-plant'
 };
 
 const defaultTimelineData: TimelineData = {
   'pre-plant': { passes: [] },
-  'plant': { passes: [] },
   'post-plant': { passes: [] }
 };
+
+// Helper function to get machine icon type
+function getMachineIcon(machine: string): string {
+  const lowerMachine = machine.toLowerCase();
+  if (lowerMachine.includes('spreader')) return 'spreader';
+  if (lowerMachine.includes('planter')) return 'planter';
+  if (lowerMachine.includes('colter')) return 'colter';
+  return 'spreader'; // default
+}
+
+const MACHINE_OPTIONS = [
+  '600R Spreader',
+  '1775NT planter',
+  '2510L colter rig'
+];
+
+const NUTRIENT_TYPE_OPTIONS = [
+  'DAP',
+  'KNO3',
+  'Ammonium Nitrate',
+  'Ammonium Nitrate, Ammonium Sulfate'
+];
 
 async function fetchTimelineData(): Promise<TimelineData> {
   try {
@@ -105,6 +126,15 @@ export default function FertilityTimeline() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<PassTile>>({});
   const [unsavedPassIds, setUnsavedPassIds] = useState<Set<string>>(new Set());
+  
+  const [yieldGoal, setYieldGoal] = useState<string>('');
+  const [nutrientGoals, setNutrientGoals] = useState<string>('');
+  const [isSavingGoals, setIsSavingGoals] = useState(false);
+  const yieldGoalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const nutrientGoalsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [draggedPassId, setDraggedPassId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Load data from API on mount
   useEffect(() => {
@@ -113,7 +143,22 @@ export default function FertilityTimeline() {
       setError(null);
       try {
         const data = await fetchTimelineData();
-        setTimelineData(data);
+        // Renumber passes based on their order
+        const renumberedData: TimelineData = {
+          'pre-plant': {
+            passes: data['pre-plant'].passes.map((pass, index) => ({
+              ...pass,
+              passNumber: `${index + 1}`
+            }))
+          },
+          'post-plant': {
+            passes: data['post-plant'].passes.map((pass, index) => ({
+              ...pass,
+              passNumber: `${index + 1}`
+            }))
+          }
+        };
+        setTimelineData(renumberedData);
         setIsLoaded(true);
       } catch (err) {
         setError('Failed to load passes. Please try again.');
@@ -122,8 +167,75 @@ export default function FertilityTimeline() {
         setIsLoading(false);
       }
     }
+    
+    async function loadGoals() {
+      try {
+        const [yieldResponse, nutrientResponse] = await Promise.all([
+          fetch('/api/philosophy/yield-goal'),
+          fetch('/api/philosophy/nutrient-goals')
+        ]);
+        
+        if (yieldResponse.ok) {
+          const yieldData = await yieldResponse.json();
+          setYieldGoal(yieldData.value || '');
+        }
+        
+        if (nutrientResponse.ok) {
+          const nutrientData = await nutrientResponse.json();
+          setNutrientGoals(nutrientData.value || '');
+        }
+      } catch (err) {
+        console.error('Error loading goals:', err);
+      }
+    }
+    
     loadData();
+    loadGoals();
+    
+    // Cleanup timeouts on unmount
+    return () => {
+      if (yieldGoalTimeoutRef.current) {
+        clearTimeout(yieldGoalTimeoutRef.current);
+      }
+      if (nutrientGoalsTimeoutRef.current) {
+        clearTimeout(nutrientGoalsTimeoutRef.current);
+      }
+    };
   }, []);
+  
+  async function saveYieldGoal(value: string) {
+    setIsSavingGoals(true);
+    try {
+      const response = await fetch('/api/philosophy/yield-goal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to save yield goal');
+    } catch (err) {
+      console.error('Error saving yield goal:', err);
+      setError('Failed to save yield goal. Please try again.');
+    } finally {
+      setIsSavingGoals(false);
+    }
+  }
+  
+  async function saveNutrientGoals(value: string) {
+    setIsSavingGoals(true);
+    try {
+      const response = await fetch('/api/philosophy/nutrient-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to save nutrient goals');
+    } catch (err) {
+      console.error('Error saving nutrient goals:', err);
+      setError('Failed to save nutrient goals. Please try again.');
+    } finally {
+      setIsSavingGoals(false);
+    }
+  }
 
   function generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -132,9 +244,10 @@ export default function FertilityTimeline() {
   function addPass(phase: Phase) {
     const newPass: PassTile = {
       id: generateId(),
-      passNumber: `Pass ${timelineData[phase].passes.length + 1}`,
+      passNumber: `${timelineData[phase].passes.length + 1}`,
       machine: '',
-      fertilizerType: ''
+      nutrientTypes: '',
+      vrRx: false
     };
     
     // Add to UI (not saved to API yet)
@@ -224,7 +337,7 @@ export default function FertilityTimeline() {
     
     if (isNewPass && editingId) {
       // Remove unsaved pass if canceling
-      const phase = (['pre-plant', 'plant', 'post-plant'] as Phase[]).find(p =>
+      const phase = (['pre-plant', 'post-plant'] as Phase[]).find(p =>
         timelineData[p].passes.some(pass => pass.id === editingId)
       );
       
@@ -247,17 +360,284 @@ export default function FertilityTimeline() {
     setEditForm({});
   }
 
-  async function handleDeletePass(phase: Phase, passId: string) {
-    const passToDelete = timelineData[phase].passes.find(p => p.id === passId);
-    const isNewPass = unsavedPassIds.has(passId);
+  async function handleDragStart(phase: Phase, passId: string) {
+    setDraggedPassId(passId);
+  }
+
+  async function handleDragOver(phase: Phase, index: number, e: React.DragEvent) {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }
+
+  async function handleDragLeave() {
+    setDragOverIndex(null);
+  }
+
+  async function handleDrop(phase: Phase, dropIndex: number) {
+    if (!draggedPassId) return;
+    
+    const currentPasses = [...timelineData[phase].passes];
+    const draggedIndex = currentPasses.findIndex(p => p.id === draggedPassId);
+    
+    if (draggedIndex === -1 || draggedIndex === dropIndex) {
+      setDraggedPassId(null);
+      setDragOverIndex(null);
+      return;
+    }
+    
+    // Remove dragged item from its current position
+    const [draggedItem] = currentPasses.splice(draggedIndex, 1);
+    
+    // Insert at new position
+    currentPasses.splice(dropIndex, 0, draggedItem);
+    
+    // Update pass numbers based on new order
+    const updatedPasses = currentPasses.map((pass, index) => ({
+      ...pass,
+      passNumber: `${index + 1}`
+    }));
     
     // Optimistically update UI
     setTimelineData(prev => ({
       ...prev,
       [phase]: {
-        passes: prev[phase].passes.filter(pass => pass.id !== passId)
+        passes: updatedPasses
       }
     }));
+    
+    // Save to API
+    try {
+      // Update all passes in the phase to maintain order
+      const updatedData: TimelineData = {
+        ...timelineData,
+        [phase]: {
+          passes: updatedPasses
+        }
+      };
+      
+      // Save entire phase data to maintain order
+      await updateEdgeConfigPhase(phase, updatedPasses);
+      setTimelineData(updatedData);
+    } catch (err) {
+      setError('Failed to reorder passes. Please try again.');
+      // Revert on error
+      setTimelineData(prev => ({
+        ...prev,
+        [phase]: {
+          passes: currentPasses
+        }
+      }));
+    }
+    
+    setDraggedPassId(null);
+    setDragOverIndex(null);
+  }
+
+  async function updateEdgeConfigPhase(phase: Phase, passes: PassTile[]) {
+    // Fetch current data
+    const currentData = await fetchTimelineData();
+    
+    // Update the phase with new passes array
+    const updatedData: TimelineData = {
+      ...currentData,
+      [phase]: {
+        passes
+      }
+    };
+    
+    // Save to Edge Config
+    const response = await fetch('/api/passes', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phase,
+        passes // Send entire array to update order
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update pass order');
+    }
+    
+    return await response.json();
+  }
+
+  // Render a single pass tile
+  function renderPassTile(phase: Phase, pass: PassTile, index: number) {
+    const isEditing = editingId === pass.id;
+    const machineIcon = getMachineIcon(pass.machine);
+    const isDragging = draggedPassId === pass.id;
+    const isDragOver = dragOverIndex === index;
+    
+    return (
+      <div 
+        key={pass.id} 
+        draggable
+        onDragStart={(e) => {
+          handleDragStart(phase, pass.id);
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={(e) => handleDragOver(phase, index, e)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleDrop(phase, index);
+        }}
+        style={{
+          ...styles.passTile,
+          opacity: isDragging ? 0.5 : 1,
+          border: isDragOver ? '2px dashed #4a7c59' : 'none',
+          cursor: 'move',
+        }}
+      >
+        {isEditing ? (
+          <div style={styles.editForm}>
+            <div style={styles.machineIconPlaceholder}>
+              {machineIcon === 'spreader' && '🚜'}
+              {machineIcon === 'planter' && '🌾'}
+              {machineIcon === 'colter' && '🔧'}
+            </div>
+            <div style={styles.editFormFields}>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>Machine:</label>
+                <select
+                  value={editForm.machine || ''}
+                  onChange={(e) => setEditForm({ ...editForm, machine: e.target.value })}
+                  style={styles.fieldSelect}
+                >
+                  <option value="">Select a machine</option>
+                  {MACHINE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>VR RX:</label>
+                <input
+                  type="checkbox"
+                  checked={editForm.vrRx || false}
+                  onChange={(e) => setEditForm({ ...editForm, vrRx: e.target.checked })}
+                  style={styles.checkboxInput}
+                />
+              </div>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>Nutrient types:</label>
+                <select
+                  value={editForm.nutrientTypes || ''}
+                  onChange={(e) => setEditForm({ ...editForm, nutrientTypes: e.target.value })}
+                  style={styles.fieldSelect}
+                >
+                  <option value="">Select nutrient types</option>
+                  {NUTRIENT_TYPE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.editActions}>
+                <button
+                  style={styles.saveButton}
+                  onClick={() => saveEdit(phase)}
+                >
+                  Save
+                </button>
+                <button
+                  style={styles.cancelButton}
+                  onClick={cancelEdit}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={styles.passTileHeader}>
+              <div style={styles.passNumberBadge}>
+                {index + 1}
+              </div>
+              <div style={styles.machineIconPlaceholder}>
+                {machineIcon === 'spreader' && '🚜'}
+                {machineIcon === 'planter' && '🌾'}
+                {machineIcon === 'colter' && '🔧'}
+              </div>
+              <div style={styles.tileActions}>
+                <button
+                  style={styles.editIconButton}
+                  onClick={() => startEdit(pass)}
+                  title="Edit pass"
+                >
+                  ✏️
+                </button>
+                <button
+                  style={styles.deleteIconButton}
+                  onClick={() => handleDeletePass(phase, pass.id)}
+                  title="Delete pass"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+            <div style={styles.passTileFields}>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>Machine:</label>
+                <input
+                  type="text"
+                  value={pass.machine || ''}
+                  readOnly
+                  style={styles.fieldInput}
+                />
+              </div>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>VR RX:</label>
+                <input
+                  type="checkbox"
+                  checked={pass.vrRx || false}
+                  readOnly
+                  style={styles.checkboxInput}
+                />
+              </div>
+              <div style={styles.fieldRow}>
+                <label style={styles.fieldLabel}>Nutrient types:</label>
+                <input
+                  type="text"
+                  value={pass.nutrientTypes || ''}
+                  readOnly
+                  style={styles.fieldInput}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  async function handleDeletePass(phase: Phase, passId: string) {
+    const passToDelete = timelineData[phase].passes.find(p => p.id === passId);
+    const isNewPass = unsavedPassIds.has(passId);
+    
+    // Optimistically update UI and renumber passes
+    setTimelineData(prev => {
+      const updatedPasses = prev[phase].passes
+        .filter(pass => pass.id !== passId)
+        .map((pass, index) => ({
+          ...pass,
+          passNumber: `${index + 1}`
+        }));
+      
+      return {
+        ...prev,
+        [phase]: {
+          passes: updatedPasses
+        }
+      };
+    });
     
     // Remove from unsaved list if it was unsaved
     if (isNewPass) {
@@ -276,7 +656,17 @@ export default function FertilityTimeline() {
     if (!isNewPass) {
       try {
         const updatedData = await deletePass(phase, passId);
-        setTimelineData(updatedData);
+        // Renumber passes after deletion
+        const renumberedData: TimelineData = {
+          ...updatedData,
+          [phase]: {
+            passes: updatedData[phase].passes.map((pass, index) => ({
+              ...pass,
+              passNumber: `${index + 1}`
+            }))
+          }
+        };
+        setTimelineData(renumberedData);
       } catch (err) {
         setError('Failed to delete pass. Please try again.');
         // Revert optimistic update
@@ -295,8 +685,8 @@ export default function FertilityTimeline() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Fertility Planning Timeline</h1>
-        <p style={styles.subtitle}>Manage your fertilization passes across all phases</p>
+        <h1 style={styles.title}>Fertilizer Philosophy</h1>
+        <p style={styles.subtitle}>Define the principles that guide your fertilizer application</p>
         {error && (
           <div style={styles.errorMessage}>
             {error}
@@ -313,149 +703,118 @@ export default function FertilityTimeline() {
         )}
       </div>
 
-      <div style={styles.timeline}>
-        {(['pre-plant', 'plant', 'post-plant'] as Phase[]).map((phase, phaseIndex) => (
-          <div key={phase} style={styles.phaseSection}>
-            <div style={styles.phaseHeader}>
-              <div style={styles.phaseIndicator}>
-                <div style={styles.phaseNumber}>{phaseIndex + 1}</div>
-                {phaseIndex < 2 && <div style={styles.phaseConnector} />}
+      {/* Philosophy Inputs */}
+      <div style={styles.philosophySection}>
+        <div style={styles.philosophyCard}>
+          <label style={styles.philosophyLabel}>Yield Goal</label>
+          <textarea
+            value={yieldGoal}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setYieldGoal(newValue);
+              
+              // Clear existing timeout
+              if (yieldGoalTimeoutRef.current) {
+                clearTimeout(yieldGoalTimeoutRef.current);
+              }
+              
+              // Debounce save
+              yieldGoalTimeoutRef.current = setTimeout(() => {
+                saveYieldGoal(newValue);
+              }, 1000);
+            }}
+            placeholder="Enter your yield goal philosophy..."
+            style={styles.philosophyTextarea}
+            rows={4}
+          />
+        </div>
+        <div style={styles.philosophyCard}>
+          <label style={styles.philosophyLabel}>Nutrient Goals</label>
+          <textarea
+            value={nutrientGoals}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setNutrientGoals(newValue);
+              
+              // Clear existing timeout
+              if (nutrientGoalsTimeoutRef.current) {
+                clearTimeout(nutrientGoalsTimeoutRef.current);
+              }
+              
+              // Debounce save
+              nutrientGoalsTimeoutRef.current = setTimeout(() => {
+                saveNutrientGoals(newValue);
+              }, 1000);
+            }}
+            placeholder="Enter your nutrient goals philosophy..."
+            style={styles.philosophyTextarea}
+            rows={4}
+          />
+        </div>
+      </div>
+
+      <div style={styles.timelineWrapper}>
+        <div style={styles.timelineContainer}>
+          {/* Pre-plant label above timeline */}
+          <div style={styles.prePlantLabel}>
+            <span style={styles.phaseLabelText}>Pre-plant</span>
+          </div>
+
+          {/* Timeline line */}
+          <div style={styles.timelineLine}>
+            <div style={styles.timelineArrowUp}>▲</div>
+            <div style={styles.timelineLineInner}></div>
+            <div style={styles.timelineLineInner}></div>
+            <div style={styles.timelineArrowDown}>▼</div>
+          </div>
+
+          {/* Seedling icon beside the line */}
+          <div style={styles.seedlingMarker}>
+            <span style={styles.seedlingIcon}>🌱</span>
+          </div>
+
+          {/* Post-plant label below timeline */}
+          <div style={styles.postPlantLabel}>
+            <span style={styles.phaseLabelText}>Post-plant</span>
+          </div>
+
+          {/* Passes container */}
+          <div style={styles.passesWrapper}>
+            {/* Pre-plant phase */}
+            <div style={styles.phaseSection}>
+              <div style={styles.passesList}>
+                {timelineData['pre-plant'].passes.map((pass, index) => (
+                  <div key={pass.id}>
+                    {index > 0 && <div style={styles.connectorPlus}>+</div>}
+                    {renderPassTile('pre-plant', pass, index)}
+                  </div>
+                ))}
               </div>
-              <div style={styles.phaseTitleContainer}>
-                <h2 style={styles.phaseTitle}>{PHASE_NAMES[phase]}</h2>
-              </div>
-            </div>
-            <div style={styles.addButtonContainer}>
-              <button
-                style={styles.addButton}
-                onClick={() => addPass(phase)}
-                title="Add new pass"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                }}
-              >
-                + Add Pass
-              </button>
             </div>
 
-            <div style={styles.passesContainer}>
-              {timelineData[phase].passes.length === 0 ? (
-                <div style={styles.emptyState}>
-                  <p style={styles.emptyText}>No passes yet. Click "Add Pass" to get started.</p>
-                </div>
-              ) : (
-                timelineData[phase].passes.map((pass) => (
-                  <div key={pass.id} style={styles.passTile}>
-                    {editingId === pass.id ? (
-                      <div style={styles.editForm}>
-                        <input
-                          type="text"
-                          placeholder="Pass Number"
-                          value={editForm.passNumber || ''}
-                          onChange={(e) => setEditForm({ ...editForm, passNumber: e.target.value })}
-                          style={styles.input}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Machine Used"
-                          value={editForm.machine || ''}
-                          onChange={(e) => setEditForm({ ...editForm, machine: e.target.value })}
-                          style={styles.input}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Fertilizer Type"
-                          value={editForm.fertilizerType || ''}
-                          onChange={(e) => setEditForm({ ...editForm, fertilizerType: e.target.value })}
-                          style={styles.input}
-                        />
-                        <div style={styles.editActions}>
-                          <button
-                            style={styles.saveButton}
-                            onClick={() => saveEdit(phase)}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                            }}
-                          >
-                            Save
-                          </button>
-                          <button
-                            style={styles.cancelButton}
-                            onClick={cancelEdit}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#d0d0d0';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#e0e0e0';
-                              e.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={styles.tileHeader}>
-                          <h3 style={styles.passNumber}>{pass.passNumber}</h3>
-                          <div style={styles.tileActions}>
-                            <button
-                              style={styles.editIconButton}
-                              onClick={() => startEdit(pass)}
-                              title="Edit pass"
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(45, 80, 22, 0.1)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                              }}
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              style={styles.deleteIconButton}
-                              onClick={() => handleDeletePass(phase, pass.id)}
-                              title="Delete pass"
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(220, 53, 69, 0.1)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                              }}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                        <div style={styles.tileContent}>
-                          <div style={styles.infoRow}>
-                            <span style={styles.label}>Machine:</span>
-                            <span style={styles.value}>{pass.machine || 'Not specified'}</span>
-                          </div>
-                          <div style={styles.infoRow}>
-                            <span style={styles.label}>Fertilizer:</span>
-                            <span style={styles.value}>{pass.fertilizerType || 'Not specified'}</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
+            {/* Post-plant phase */}
+            <div style={styles.phaseSection}>
+              <h3 style={styles.sectionTitle}>Typical Passes</h3>
+              <div style={styles.passesList}>
+                {timelineData['post-plant'].passes.map((pass, index) => (
+                  <div key={pass.id}>
+                    {index > 0 && <div style={styles.connectorPlus}>+</div>}
+                    {renderPassTile('post-plant', pass, index)}
                   </div>
-                ))
-              )}
+                ))}
+              </div>
+              <div style={styles.addPassContainer}>
+                <button
+                  style={styles.addPassButton}
+                  onClick={() => addPass('post-plant')}
+                  title="Add pass to Post-plant"
+                >
+                  + Add Pass
+                </button>
+              </div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -465,21 +824,54 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #2d5016, #4a7c59)',
-    padding: '20px',
+    padding: '40px 20px',
   },
   header: {
     background: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 15,
     padding: '30px 20px',
     margin: '0 auto 30px',
-    maxWidth: 1400,
+    maxWidth: 1200,
     boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
     textAlign: 'center',
+  },
+  philosophySection: {
+    maxWidth: 1200,
+    margin: '0 auto 30px',
+    display: 'flex',
+    gap: '20px',
+    flexWrap: 'wrap',
+  },
+  philosophyCard: {
+    flex: '1 1 400px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 15,
+    padding: '25px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+  },
+  philosophyLabel: {
+    display: 'block',
+    color: '#2c3e50',
+    fontSize: '18px',
+    fontWeight: 600,
+    marginBottom: '12px',
+  },
+  philosophyTextarea: {
+    width: '100%',
+    padding: '12px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    color: '#2c3e50',
+    resize: 'vertical',
+    transition: 'border-color 0.2s ease',
+    minHeight: '100px',
   },
   title: {
     margin: '0 0 10px 0',
     color: '#2c3e50',
-    fontSize: '32px',
+    fontSize: '28px',
     fontWeight: 600,
   },
   subtitle: {
@@ -487,117 +879,212 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#7f8c8d',
     fontSize: '16px',
   },
-  timeline: {
-    maxWidth: 1400,
+  timelineWrapper: {
+    maxWidth: 1200,
     margin: '0 auto',
+  },
+  timelineContainer: {
     display: 'flex',
-    gap: '20px',
-    alignItems: 'flex-start',
-    overflowX: 'auto',
-    paddingBottom: '20px',
+    position: 'relative',
+    background: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: '15px',
+    padding: '40px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+  },
+  prePlantLabel: {
+    position: 'absolute',
+    left: '80px',
+    top: '30px',
+    transform: 'translateX(-50%)',
+    zIndex: 2,
+  },
+  postPlantLabel: {
+    position: 'absolute',
+    left: '80px',
+    bottom: '30px',
+    transform: 'translateX(-50%)',
+    zIndex: 2,
+  },
+  timelineLine: {
+    position: 'absolute',
+    left: '80px',
+    top: '70px',
+    bottom: '70px',
+    width: '4px',
+    background: '#888',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  timelineArrowUp: {
+    color: '#888',
+    fontSize: '16px',
+    marginBottom: '10px',
+  },
+  timelineLineInner: {
+    flex: 1,
+    width: '100%',
+    background: '#888',
+  },
+  seedlingMarker: {
+    position: 'absolute',
+    left: '40px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    zIndex: 2,
+  },
+  seedlingIcon: {
+    fontSize: '24px',
+    display: 'block',
+  },
+  timelineArrowDown: {
+    color: '#888',
+    fontSize: '16px',
+    marginTop: '10px',
+  },
+  passesWrapper: {
+    flex: 1,
+    marginLeft: '120px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '40px',
   },
   phaseSection: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 15,
-    padding: '30px',
-    minWidth: '350px',
-    flex: '1 1 0',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
     display: 'flex',
     flexDirection: 'column',
+    gap: '20px',
   },
-  phaseHeader: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: '20px',
-    gap: '15px',
-  },
-  phaseIndicator: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-    width: '100%',
-    justifyContent: 'center',
-  },
-  phaseNumber: {
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #2d5016, #4a7c59)',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionTitle: {
+    margin: '0 0 15px 0',
+    color: '#2c3e50',
     fontSize: '20px',
     fontWeight: 600,
-    boxShadow: '0 4px 15px rgba(45, 80, 22, 0.3)',
-    flexShrink: 0,
   },
-  phaseConnector: {
-    width: '40px',
-    height: '3px',
-    background: 'linear-gradient(to right, #4a7c59, #2d5016)',
-    marginLeft: '10px',
-    marginRight: '10px',
-  },
-  phaseTitleContainer: {
-    width: '100%',
-    textAlign: 'center',
-  },
-  addButtonContainer: {
-    marginBottom: '20px',
+  addPassContainer: {
     display: 'flex',
     justifyContent: 'center',
+    marginTop: '10px',
   },
-  phaseTitle: {
-    margin: 0,
-    color: '#2c3e50',
-    fontSize: '24px',
-    fontWeight: 600,
-  },
-  addButton: {
-    background: 'linear-gradient(135deg, #2d5016, #4a7c59)',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontWeight: 500,
-    fontSize: '14px',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  passesContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '15px',
-    flex: 1,
-    overflowY: 'auto',
-    maxHeight: '600px',
-  },
-  passTile: {
-    background: '#f8f9fa',
-    borderRadius: 12,
-    padding: '20px',
-    border: '2px solid #e0e0e0',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-  },
-  tileHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '15px',
-    paddingBottom: '15px',
-    borderBottom: '2px solid #e0e0e0',
-  },
-  passNumber: {
-    margin: 0,
+  phaseLabelText: {
     color: '#2c3e50',
     fontSize: '18px',
     fontWeight: 600,
+  },
+  passesList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+  },
+  connectorPlus: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: '20px',
+    fontWeight: 'bold',
+    margin: '5px 0',
+  },
+  passTile: {
+    background: '#90EE90',
+    borderRadius: '12px',
+    padding: '20px',
+    display: 'flex',
+    gap: '15px',
+    alignItems: 'flex-start',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    position: 'relative',
+  },
+  passNumberBadge: {
+    position: 'absolute',
+    top: '10px',
+    left: '10px',
+    background: '#2c3e50',
+    color: 'white',
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
+    fontWeight: 600,
+    zIndex: 10,
+  },
+  machineIconPlaceholder: {
+    width: '50px',
+    height: '50px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '32px',
+    flexShrink: 0,
+  },
+  passTileHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  passTileFields: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  editForm: {
+    display: 'flex',
+    gap: '15px',
+    width: '100%',
+  },
+  editFormFields: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  fieldLabel: {
+    color: '#2c3e50',
+    fontSize: '14px',
+    fontWeight: 500,
+    minWidth: '100px',
+    whiteSpace: 'nowrap',
+  },
+  fieldInput: {
+    flex: 1,
+    padding: '8px 12px',
+    border: 'none',
+    borderRadius: '6px',
+    background: 'white',
+    fontSize: '14px',
+    color: '#2c3e50',
+    fontFamily: 'inherit',
+  },
+  fieldSelect: {
+    flex: 1,
+    padding: '8px 12px',
+    border: 'none',
+    borderRadius: '6px',
+    background: 'white',
+    fontSize: '14px',
+    color: '#2c3e50',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+  },
+  checkboxInput: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
+    accentColor: '#4a7c59',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
+    accentColor: '#4a7c59',
   },
   tileActions: {
     display: 'flex',
@@ -607,7 +1094,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '18px',
+    fontSize: '16px',
     padding: '4px 8px',
     borderRadius: '4px',
     transition: 'background 0.2s ease',
@@ -616,85 +1103,55 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '18px',
+    fontSize: '16px',
     padding: '4px 8px',
     borderRadius: '4px',
     transition: 'background 0.2s ease',
   },
-  tileContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  infoRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    color: '#7f8c8d',
-    fontSize: '14px',
-    fontWeight: 500,
-  },
-  value: {
-    color: '#2c3e50',
-    fontSize: '14px',
-    fontWeight: 400,
-    textAlign: 'right',
-    flex: 1,
-    marginLeft: '10px',
-  },
-  editForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  input: {
-    padding: '10px',
-    border: '2px solid #e0e0e0',
-    borderRadius: 8,
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    transition: 'border-color 0.2s ease',
-  },
   editActions: {
     display: 'flex',
     gap: '10px',
-    marginTop: '8px',
+    marginTop: '10px',
   },
   saveButton: {
     flex: 1,
-    background: 'linear-gradient(135deg, #2d5016, #4a7c59)',
+    background: '#4a7c59',
     color: 'white',
     border: 'none',
-    padding: '10px',
-    borderRadius: 8,
+    padding: '8px 16px',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 500,
     fontSize: '14px',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    transition: 'background 0.2s ease',
   },
   cancelButton: {
     flex: 1,
     background: '#e0e0e0',
     color: '#2c3e50',
     border: 'none',
-    padding: '10px',
-    borderRadius: 8,
+    padding: '8px 16px',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 500,
     fontSize: '14px',
-    transition: 'background 0.2s ease, transform 0.2s ease',
+    transition: 'background 0.2s ease',
   },
-  emptyState: {
-    textAlign: 'center',
-    padding: '40px 20px',
-    color: '#7f8c8d',
+  emptyPassSlot: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '20px',
   },
-  emptyText: {
-    margin: 0,
-    fontSize: '16px',
+  addPassButton: {
+    background: '#4a7c59',
+    color: 'white',
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: 500,
+    fontSize: '14px',
+    transition: 'background 0.2s ease',
   },
   errorMessage: {
     background: '#fee',

@@ -10,13 +10,14 @@ const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning';
 
-type Phase = 'pre-plant' | 'plant' | 'post-plant';
+type Phase = 'pre-plant' | 'post-plant';
 
 interface PassTile {
   id: string;
   passNumber: string;
   machine: string;
-  fertilizerType: string;
+  nutrientTypes: string;
+  vrRx: boolean;
 }
 
 interface PhaseData {
@@ -91,7 +92,6 @@ export default function Page() {
         // Flatten all passes from all phases into a single array
         const passes: PassTile[] = [
           ...(data['pre-plant']?.passes || []),
-          ...(data['plant']?.passes || []),
           ...(data['post-plant']?.passes || [])
         ];
         
@@ -354,14 +354,32 @@ export default function Page() {
                   display: 'block',
                   marginBottom: '5px'
                 }}>
-                  Fertilizer Type:
+                  Nutrient Types:
                 </span>
                 <span style={{
                   color: '#2c3e50',
                   fontSize: '16px',
                   fontWeight: 400
                 }}>
-                  {selectedPass.fertilizerType || 'Not specified'}
+                  {selectedPass.nutrientTypes || 'Not specified'}
+                </span>
+              </div>
+              <div>
+                <span style={{
+                  color: '#7f8c8d',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  display: 'block',
+                  marginBottom: '5px'
+                }}>
+                  VR RX:
+                </span>
+                <span style={{
+                  color: '#2c3e50',
+                  fontSize: '16px',
+                  fontWeight: 400
+                }}>
+                  {selectedPass.vrRx ? 'Yes' : 'No'}
                 </span>
               </div>
               <div>

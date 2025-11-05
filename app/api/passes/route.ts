@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAll } from '@vercel/edge-config';
 
-type Phase = 'pre-plant' | 'plant' | 'post-plant';
+type Phase = 'pre-plant' | 'post-plant';
 
 interface PassTile {
   id: string;
   passNumber: string;
   machine: string;
-  fertilizerType: string;
+  nutrientTypes: string;
+  vrRx: boolean;
 }
 
 interface PhaseData {
@@ -20,7 +21,6 @@ const EDGE_CONFIG_KEY = 'fertility-timeline-data';
 
 const defaultTimelineData: TimelineData = {
   'pre-plant': { passes: [] },
-  'plant': { passes: [] },
   'post-plant': { passes: [] }
 };
 
@@ -120,9 +120,6 @@ export async function GET() {
         'pre-plant': data['pre-plant'] && Array.isArray(data['pre-plant'].passes) 
           ? data['pre-plant'] 
           : { passes: [] },
-        'plant': data['plant'] && Array.isArray(data['plant'].passes) 
-          ? data['plant'] 
-          : { passes: [] },
         'post-plant': data['post-plant'] && Array.isArray(data['post-plant'].passes) 
           ? data['post-plant'] 
           : { passes: [] },
@@ -174,37 +171,67 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT - Update a pass
+// PUT - Update a pass or reorder passes
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phase, passId, updates } = body as { 
-      phase: Phase; 
-      passId: string; 
-      updates: Partial<PassTile> 
-    };
     
-    if (!phase || !passId || !updates) {
-      return NextResponse.json(
-        { error: 'Missing phase, passId, or updates' },
-        { status: 400 }
-      );
-    }
-    
-    const currentData = await getEdgeConfigValue(EDGE_CONFIG_KEY) || defaultTimelineData;
-    
-    const updatedData: TimelineData = {
-      ...currentData,
-      [phase]: {
-        passes: currentData[phase].passes.map((p: PassTile) =>
-          p.id === passId ? { ...p, ...updates } : p
-        )
+    // Check if this is a bulk update (reordering passes)
+    if ('passes' in body && Array.isArray(body.passes)) {
+      const { phase, passes } = body as { 
+        phase: Phase; 
+        passes: PassTile[];
+      };
+      
+      if (!phase || !passes) {
+        return NextResponse.json(
+          { error: 'Missing phase or passes array' },
+          { status: 400 }
+        );
       }
-    };
-    
-    await updateEdgeConfig(EDGE_CONFIG_KEY, updatedData);
-    
-    return NextResponse.json(updatedData);
+      
+      const currentData = await getEdgeConfigValue(EDGE_CONFIG_KEY) || defaultTimelineData;
+      
+      const updatedData: TimelineData = {
+        ...currentData,
+        [phase]: {
+          passes
+        }
+      };
+      
+      await updateEdgeConfig(EDGE_CONFIG_KEY, updatedData);
+      
+      return NextResponse.json(updatedData);
+    } else {
+      // Single pass update
+      const { phase, passId, updates } = body as { 
+        phase: Phase; 
+        passId: string; 
+        updates: Partial<PassTile> 
+      };
+      
+      if (!phase || !passId || !updates) {
+        return NextResponse.json(
+          { error: 'Missing phase, passId, or updates' },
+          { status: 400 }
+        );
+      }
+      
+      const currentData = await getEdgeConfigValue(EDGE_CONFIG_KEY) || defaultTimelineData;
+      
+      const updatedData: TimelineData = {
+        ...currentData,
+        [phase]: {
+          passes: currentData[phase].passes.map((p: PassTile) =>
+            p.id === passId ? { ...p, ...updates } : p
+          )
+        }
+      };
+      
+      await updateEdgeConfig(EDGE_CONFIG_KEY, updatedData);
+      
+      return NextResponse.json(updatedData);
+    }
   } catch (error) {
     console.error('Error updating pass:', error);
     return NextResponse.json(
