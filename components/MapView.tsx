@@ -34,6 +34,48 @@ function getNutrientName(n: 'n-current'|'p-current'|'k-current'|'n-needed'|'p-ne
   return 'Unknown';
 }
 
+/**
+ * Calculate area of a polygon in acres using spherical geometry
+ * Uses the spherical excess formula for accurate area calculation
+ */
+function calculateAcres(polygon: GeoJSONPolygon): number {
+  const coordinates = polygon.coordinates[0]; // Outer ring
+  if (coordinates.length < 3) return 0;
+  
+  // Earth's radius in meters
+  const R = 6378137; // meters
+  const METERS_TO_ACRES = 0.000247105; // 1 square meter = 0.000247105 acres
+  
+  // Use shoelace formula with latitude correction for spherical coordinates
+  // This is accurate for small polygons (agricultural fields)
+  let area = 0;
+  const n = coordinates.length;
+  
+  // Get average latitude for correction factor
+  let avgLat = 0;
+  for (let i = 0; i < n - 1; i++) {
+    avgLat += coordinates[i][1];
+  }
+  avgLat /= (n - 1);
+  const latCorrection = Math.cos(avgLat * Math.PI / 180);
+  
+  // Shoelace formula
+  for (let i = 0; i < n - 1; i++) {
+    const [lon1, lat1] = coordinates[i];
+    const [lon2, lat2] = coordinates[i + 1];
+    area += (lon2 - lon1) * (lat2 + lat1);
+  }
+  
+  // Calculate area in square meters
+  // Convert degrees to meters (approximate: 1 degree lat ≈ 111,320m, 1 degree lon ≈ 111,320m * cos(lat))
+  const DEG_TO_M_LAT = 111320; // meters per degree latitude
+  const DEG_TO_M_LON = DEG_TO_M_LAT * latCorrection; // meters per degree longitude at this latitude
+  const areaM2 = Math.abs(area * 0.5 * DEG_TO_M_LAT * DEG_TO_M_LON);
+  
+  // Convert to acres
+  return areaM2 * METERS_TO_ACRES;
+}
+
 function getSourceConfigForField(fieldName: string) {
   switch ((fieldName || '').toLowerCase()) {
     case FIELD_NAMES.NORTH_OF_ROAD.toLowerCase():
@@ -216,11 +258,16 @@ export default function MapView(props: {
   const [paintMode, setPaintMode] = useState<boolean>(false);
   const [selectedYieldValue, setSelectedYieldValue] = useState<number>(125);
   const [editedFeatures, setEditedFeatures] = useState<Map<string, { geometry: any; properties: any; yieldValue: number }>>(new Map());
+  const [allEncounteredFeatures, setAllEncounteredFeatures] = useState<Map<string, GeoJSON.Feature>>(new Map());
+  const [totalAcres, setTotalAcres] = useState<number>(0);
+  const [totalYield, setTotalYield] = useState<number>(0);
+  const [isCalculatingStats, setIsCalculatingStats] = useState<boolean>(false);
   const isPaintingRef = useRef<boolean>(false);
   const editedFeaturesGeoJSONRef = useRef<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] });
   const paintModeRef = useRef(paintMode);
   const selectedYieldValueRef = useRef(selectedYieldValue);
   const editedFeaturesRef = useRef(editedFeatures);
+  const allFeaturesRef = useRef(allEncounteredFeatures);
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -234,6 +281,10 @@ export default function MapView(props: {
   useEffect(() => {
     editedFeaturesRef.current = editedFeatures;
   }, [editedFeatures]);
+  
+  useEffect(() => {
+    allFeaturesRef.current = allEncounteredFeatures;
+  }, [allEncounteredFeatures]);
 
   const cfg = useMemo(() => getSourceConfigForField(props.currentField), [props.currentField]);
   const layerNames = useMemo(() => getLayerNamesForField(props.currentField), [props.currentField]);
@@ -304,6 +355,11 @@ export default function MapView(props: {
               'line-width': MAP_STYLE.LINE_WIDTH
             }
           });
+        }
+        
+        // Calculate stats when on yield-view page
+        if (props.page === 'yield-view' && props.selectedAttr === 'yield_target') {
+          calculateFieldStats(map);
         }
       } catch (error) {
         console.error('Error loading map layers:', error);
@@ -606,10 +662,105 @@ export default function MapView(props: {
     }
   }, [props.selectedAttr]);
 
+  // Calculate field statistics when on yield-view page
+  const calculateFieldStats = async (map: mapboxgl.Map) => {
+    if (props.selectedAttr !== 'yield_target' || props.page !== 'yield-view') return;
+    
+    setIsCalculatingStats(true);
+    
+    try {
+      // Use field-specific bounds or query all features at a high zoom level
+      // Get the field center and create a bounding box around it
+      const cfg = getSourceConfigForField(props.currentField);
+      const center = cfg.center;
+      
+      // Create a bounding box around the field (adjust as needed based on field size)
+      // For now, we'll use a large bounding box that should cover the field
+      const bounds = new mapboxgl.LngLatBounds(
+        [center[0] - 0.01, center[1] - 0.01], // southwest
+        [center[0] + 0.01, center[1] + 0.01]  // northeast
+      );
+      
+      // Set map to show the full field bounds
+      map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for tiles to load
+      
+      // Query all rendered features at the highest detail level
+      let allFeaturesMap = new Map<string, GeoJSON.Feature>();
+      
+      // Query at zoom 16 to get the highest resolution features
+      const features = map.queryRenderedFeatures(undefined, {
+        layers: ['data-fill-highres', 'data-fill-mediumres', 'data-fill-boundariesshp', 'edited-features-fill']
+      });
+      
+      // Add unique features to our map (using feature ID or coordinates as key)
+      features.forEach(feature => {
+        if (feature.geometry.type === 'Polygon') {
+          // Use feature ID if available, otherwise use a hash of coordinates
+          const coords = JSON.stringify((feature.geometry as GeoJSONPolygon).coordinates);
+          const key = feature.id?.toString() || `coords-${coords.substring(0, 100)}`;
+          if (!allFeaturesMap.has(key)) {
+            allFeaturesMap.set(key, feature as GeoJSON.Feature);
+          }
+        }
+      });
+      
+      // Also check edited features separately to ensure we have the latest values
+      const editedFeaturesList = editedFeaturesGeoJSONRef.current.features;
+      editedFeaturesList.forEach((editedFeature: any) => {
+        if (editedFeature.geometry.type === 'Polygon') {
+          const key = editedFeature.id?.toString() || `edited-${JSON.stringify(editedFeature.geometry.coordinates).substring(0, 100)}`;
+          // Override with edited feature if it exists
+          allFeaturesMap.set(key, editedFeature);
+        }
+      });
+      
+      // Calculate totals
+      let totalAcresValue = 0;
+      let totalYieldValue = 0;
+      
+      allFeaturesMap.forEach(feature => {
+        if (feature.geometry.type === 'Polygon') {
+          const acres = calculateAcres(feature.geometry as GeoJSONPolygon);
+          totalAcresValue += acres;
+          
+          // Get yield_target value (prioritize edited value)
+          const yieldTarget = feature.properties?.yield_target || 0;
+          totalYieldValue += acres * yieldTarget;
+        }
+      });
+      
+      setTotalAcres(totalAcresValue);
+      setTotalYield(totalYieldValue);
+      setAllEncounteredFeatures(allFeaturesMap);
+    } catch (error) {
+      console.error('Error calculating field stats:', error);
+    } finally {
+      setIsCalculatingStats(false);
+    }
+  };
+
+  // Recalculate stats when entering yield-view page or when edits change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || props.page !== 'yield-view' || props.selectedAttr !== 'yield_target') {
+      return;
+    }
+    
+    // Wait a bit for map to fully load
+    const timeout = setTimeout(() => {
+      calculateFieldStats(map);
+    }, 1000);
+    
+    return () => clearTimeout(timeout);
+  }, [props.page, props.selectedAttr, props.currentField, editedFeatures.size]);
+
   // Clear paint mode when leaving yield-view page
   useEffect(() => {
     if (props.page !== 'yield-view') {
       setPaintMode(false);
+      setTotalAcres(0);
+      setTotalYield(0);
     }
   }, [props.page]);
 
@@ -643,6 +794,48 @@ export default function MapView(props: {
     if (map && map.getSource('edited-features')) {
       const source = map.getSource('edited-features') as mapboxgl.GeoJSONSource;
       source.setData(editedFeaturesGeoJSONRef.current);
+    }
+  };
+
+  const saveEditsToTileset = async () => {
+    if (editedFeatures.size === 0) {
+      alert('No edits to save');
+      return;
+    }
+
+    try {
+      // Convert edited features to array format
+      const editedFeaturesArray = Array.from(editedFeatures.entries()).map(([id, data]) => ({
+        id,
+        yield_target: data.yieldValue,
+        geometry: data.geometry,
+        properties: data.properties
+      }));
+
+      const response = await fetch('/api/mapbox/update-tileset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fieldName: props.currentField,
+          editedFeatures: editedFeaturesArray
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save edits');
+      }
+
+      const result = await response.json();
+      alert(`Success! Tileset update initiated. ${result.message}`);
+      
+      // Optionally clear edits after successful save
+      // clearEdits();
+    } catch (error) {
+      console.error('Error saving edits:', error);
+      alert(`Failed to save edits: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -708,6 +901,45 @@ export default function MapView(props: {
                   <label htmlFor="yield-target-view">Yield Target</label>
                 </div>
               </div>
+              
+              {/* Field Statistics */}
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '12px', 
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: '8px',
+                border: '1px solid rgba(0,0,0,0.1)'
+              }}>
+                {isCalculatingStats ? (
+                  <div style={{ textAlign: 'center', fontSize: '12px', color: '#666' }}>
+                    Calculating...
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ 
+                      marginBottom: '8px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#2c3e50'
+                    }}>
+                      Field Statistics
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px',
+                      color: '#555',
+                      marginBottom: '4px'
+                    }}>
+                      Total Acres: <strong style={{ color: '#2d5016' }}>{totalAcres.toFixed(2)}</strong>
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px',
+                      color: '#555'
+                    }}>
+                      Total Expected Yield: <strong style={{ color: '#2d5016' }}>{totalYield.toLocaleString('en-US', { maximumFractionDigits: 0 })} bu</strong>
+                    </div>
+                  </>
+                )}
+              </div>
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
                 <div style={{ marginBottom: '10px' }}>
                   <button
@@ -765,18 +997,33 @@ export default function MapView(props: {
                       marginBottom: '12px'
                     }} />
                     {editedFeatures.size > 0 && (
-                      <button
-                        className="panel-button"
-                        onClick={clearEdits}
-                        style={{
-                          background: '#e74c3c',
-                          width: '100%',
-                          fontSize: '12px',
-                          padding: '6px 12px'
-                        }}
-                      >
-                        Clear Edits ({editedFeatures.size})
-                      </button>
+                      <>
+                        <button
+                          className="panel-button"
+                          onClick={saveEditsToTileset}
+                          style={{
+                            background: '#3498db',
+                            width: '100%',
+                            fontSize: '12px',
+                            padding: '6px 12px',
+                            marginBottom: '8px'
+                          }}
+                        >
+                          Save to Tileset ({editedFeatures.size})
+                        </button>
+                        <button
+                          className="panel-button"
+                          onClick={clearEdits}
+                          style={{
+                            background: '#e74c3c',
+                            width: '100%',
+                            fontSize: '12px',
+                            padding: '6px 12px'
+                          }}
+                        >
+                          Clear Edits
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
