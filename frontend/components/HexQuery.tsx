@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -8,6 +8,27 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 // Dynamically import deck.gl components (client-side only)
 const DeckGL = dynamic(() => import('@deck.gl/react').then(mod => ({ default: mod.DeckGL })), { ssr: false });
 const Map = dynamic(() => import('react-map-gl').then(mod => ({ default: mod.Map })), { ssr: false });
+
+const VISUALIZATION_KEYWORDS = [
+  'show me',
+  'show the',
+  'where in the field',
+  'where are',
+  'highlight',
+  'map',
+  'visual',
+  'visualize',
+  'display',
+  'plot',
+  'heatmap',
+  'layer'
+];
+
+function questionRequiresVisualization(input: string) {
+  const normalized = (input || '').toLowerCase();
+  if (!normalized) return false;
+  return VISUALIZATION_KEYWORDS.some(keyword => normalized.includes(keyword));
+}
 
 interface QueryResult {
   question: string;
@@ -33,6 +54,7 @@ const GEOJSON_PATH = '/north-of-road-high-res.geojson';
 
 export default function HexQuery() {
   const [mounted, setMounted] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'bot',
@@ -96,6 +118,8 @@ export default function HexQuery() {
   const submitQuestion = async (rawQuestion: string) => {
     const question = rawQuestion.trim();
     if (!question || isLoading) return;
+
+    setShowMap(questionRequiresVisualization(question));
 
     setInputValue('');
     addUserMessage(question);
@@ -441,36 +465,18 @@ export default function HexQuery() {
     }
   };
 
-  return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {/* Back Button */}
-      <a
-        href="/"
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          zIndex: 1000,
-          padding: '10px 20px',
-          backgroundColor: 'rgba(45, 80, 22, 0.9)',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: 600,
-          transition: 'background-color 0.2s',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 0.9)';
-        }}
-      >
-        ← Back to Dashboard
-      </a>
+  const rootStyle: CSSProperties = showMap
+    ? { display: 'flex', height: '100vh', overflow: 'hidden' }
+    : {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'stretch',
+        height: '100vh',
+        padding: '24px',
+        background: 'radial-gradient(circle at top, #1b3b26 0%, #102718 45%, #07140c 100%)'
+      };
 
+<<<<<<< HEAD
       {/* Map Section */}
       <div 
         id="map-container"
@@ -589,41 +595,205 @@ export default function HexQuery() {
 
       {/* Chat Section */}
       <div style={{
+=======
+  const chatContainerStyle: CSSProperties = showMap
+    ? {
+>>>>>>> 356c40a (Text only response when map is not needed)
         width: '400px',
         background: 'white',
         borderLeft: '1px solid #e5e7eb',
         display: 'flex',
         flexDirection: 'column'
-      }}>
+      }
+    : {
+        flex: '0 1 720px',
+        width: '100%',
+        maxWidth: '720px',
+        background: 'white',
+        borderRadius: '18px',
+        boxShadow: '0 30px 80px rgba(6, 95, 70, 0.35)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      };
+
+  const chatHeaderStyle: CSSProperties = {
+    padding: '20px',
+    borderBottom: '1px solid #e5e7eb',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    background: showMap ? '#f9fafb' : 'white'
+  };
+
+  return (
+    <div style={rootStyle}>
+      {showMap && (
+        <>
+          {/* Back Button */}
+          <a
+            href="/"
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              zIndex: 1000,
+              padding: '10px 20px',
+              backgroundColor: 'rgba(45, 80, 22, 0.9)',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 600,
+              transition: 'background-color 0.2s',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 0.9)';
+            }}
+          >
+            ← Back to Dashboard
+          </a>
+
+          {/* Map Section */}
+          <div 
+            id="map-container"
+            style={{ 
+              flex: 1, 
+              position: 'relative', 
+              backgroundColor: '#1a1a1a', 
+              width: '100%', 
+              height: '100vh',
+              overflow: 'hidden'
+            }}
+          >
+            {mounted && DeckGL && Map && (
+              <>
+                {process.env.NODE_ENV === 'development' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '20px',
+                    zIndex: 1000,
+                    background: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    padding: '10px',
+                    fontSize: '12px',
+                    borderRadius: '4px'
+                  }}>
+                    <div>Layers: {layersState.length}</div>
+                    <div>GeoJSON: {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}</div>
+                    <div>Highlighted: {highlightedHexes.size}</div>
+                    <div>Hovered: {hoveredHex || 'none'}</div>
+                  </div>
+                )}
+                <DeckGL
+                  viewState={viewState}
+                  onViewStateChange={(e: any) => setViewState(e.viewState)}
+                  controller={true}
+                  layers={layersState}
+                  onHover={handleHover}
+                  style={{ width: '100%', height: '100%' }}
+                  getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
+                  onLoad={() => console.log('DeckGL loaded, layers:', layersState.length)}
+                  onError={(error: any) => console.error('DeckGL error:', error)}
+                >
+                  <Map
+                    reuseMaps
+                    mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
+                    mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+                    longitude={viewState.longitude}
+                    latitude={viewState.latitude}
+                    zoom={viewState.zoom}
+                    pitch={viewState.pitch}
+                    bearing={viewState.bearing}
+                  />
+                </DeckGL>
+              </>
+            )}
+            {mounted && !process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'white',
+                textAlign: 'center',
+                zIndex: 1000
+              }}>
+                <p>Mapbox token not configured. Please set NEXT_PUBLIC_MAPBOX_TOKEN in your environment variables.</p>
+              </div>
+            )}
+            <div
+              ref={tooltipRef}
+              className="tooltip"
+              style={{
+                position: 'absolute',
+                padding: '12px',
+                background: 'rgba(0, 0, 0, 0.9)',
+                color: 'white',
+                borderRadius: '8px',
+                pointerEvents: 'none',
+                fontSize: '12px',
+                zIndex: 1000,
+                maxWidth: '300px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+                display: 'none'
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Chat Section */}
+      <div style={chatContainerStyle}>
         {/* Chat Header */}
         <div style={{
-          padding: '20px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: '#f9fafb'
+          ...chatHeaderStyle,
+          borderTopLeftRadius: showMap ? 0 : 18,
+          borderTopRightRadius: showMap ? 0 : 18
         }}>
           <h2 style={{ fontSize: '20px', color: '#1f2937', margin: 0 }}>
             Query Assistant
           </h2>
-          <button
-            onClick={handleClearHistory}
-            style={{
-              padding: '6px 12px',
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#ef4444'; }}
-          >
-            Clear History
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {!showMap && (
+              <a
+                href="/"
+                style={{
+                  padding: '8px 16px',
+                  background: '#0f766e',
+                  color: 'white',
+                  borderRadius: '9999px',
+                  textDecoration: 'none',
+                  fontSize: '12px',
+                  fontWeight: 600
+                }}
+              >
+                ← Back to Dashboard
+              </a>
+            )}
+            <button
+              onClick={handleClearHistory}
+              style={{
+                padding: '6px 12px',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#ef4444'; }}
+            >
+              Clear History
+            </button>
+          </div>
         </div>
 
         {/* Chat Messages */}
@@ -731,7 +901,9 @@ export default function HexQuery() {
           borderTop: '1px solid #e5e7eb',
           display: 'flex',
           gap: '8px',
-          background: 'white'
+          background: 'white',
+          borderBottomLeftRadius: showMap ? 0 : 18,
+          borderBottomRightRadius: showMap ? 0 : 18
         }}>
           <input
             type="text"

@@ -34,7 +34,18 @@ export default function DashboardPage() {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, { yieldGoal?: File; soilSample?: File }>>({});
   const [fieldUploadStatus, setFieldUploadStatus] = useState<Record<string, { yieldGoal: boolean; soilSample: boolean }>>({});
   
-  // Generate random costs for each field (stored in state so they don't change on re-render)
+  const generateRandomFieldCost = () => {
+    const total = Math.floor(Math.random() * (100000 - 50000 + 1)) + 50000;
+    const perAcre = parseFloat((Math.random() * (200 - 100) + 100).toFixed(2));
+    return { total, perAcre };
+  };
+
+  const createEmptyPassCosts = () => ({
+    '1': { total: 0, perAcre: 0 },
+    '2': { total: 0, perAcre: 0 },
+    '3': { total: 0, perAcre: 0 }
+  });
+
   const [fieldCosts] = useState<Record<string, { total: number; perAcre: number }>>(() => {
     const costs: Record<string, { total: number; perAcre: number }> = {};
     [FIELD_NAMES.NORTH_OF_ROAD, FIELD_NAMES.SOUTH_OF_ROAD, FIELD_NAMES.RAILROAD_PIVOT].forEach(field => {
@@ -48,12 +59,10 @@ export default function DashboardPage() {
   const [selectedPass, setSelectedPass] = useState<PassTile | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   
-  // Generate cost breakdown per pass for each field
   const [passCosts] = useState<Record<string, Record<string, { total: number; perAcre: number }>>>(() => {
     const passCostsMap: Record<string, Record<string, { total: number; perAcre: number }>> = {};
     [FIELD_NAMES.NORTH_OF_ROAD, FIELD_NAMES.SOUTH_OF_ROAD, FIELD_NAMES.RAILROAD_PIVOT].forEach(field => {
       const fieldPassCosts: Record<string, { total: number; perAcre: number }> = {};
-      // Generate costs for passes 1-3 (assuming we have 3 passes per field)
       for (let i = 1; i <= 3; i++) {
         const total = Math.floor(Math.random() * (35000 - 15000 + 1)) + 15000;
         const perAcre = Math.floor(Math.random() * (70 - 30 + 1)) + 30;
@@ -63,6 +72,13 @@ export default function DashboardPage() {
     });
     return passCostsMap;
   });
+
+  const [northCostSummary, setNorthCostSummary] = useState<{ totalCost: number; costPerAcre: number } | null>(null);
+  const [northFertilizerBreakdown, setNorthFertilizerBreakdown] = useState<{
+    dap: { totalCost: number; costPerAcre: number };
+    kno3: { totalCost: number; costPerAcre: number };
+    urea: { totalCost: number; costPerAcre: number };
+  } | null>(null);
 
   const selectedAttr = useMemo(() => {
     if (page === 'yield' || page === 'yield-view') return 'yield_target';
