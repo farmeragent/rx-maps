@@ -1,0 +1,11 @@
+geopandas
+seaborn
+rasterio
+numpy
+matplotlib
+shapely
+scipy
+h3
+absl-py
+rasterstats
+duckdb
