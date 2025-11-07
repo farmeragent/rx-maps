@@ -440,16 +440,6 @@ export default function DashboardPage() {
                 })}
               </tbody>
             </table>
-            <div style={{ marginTop: '30px', textAlign: 'center' }}>
-              <button 
-                style={styles.primaryBtn} 
-                onClick={() => setPage('fertility-planning')}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-              >
-                View Fertility Planning Timeline
-              </button>
-            </div>
           </div>
         </div>
       )}
