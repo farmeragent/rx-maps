@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Dynamically import deck.gl components (client-side only)
@@ -55,6 +56,10 @@ export default function HexQuery() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  const searchParams = useSearchParams();
+  const initialQuestion = (searchParams?.get('question') || '').trim();
+  const lastAutoQuestionRef = useRef<string | null>(null);
+
   // Ensure component is mounted on client before rendering client-only content
   useEffect(() => {
     setMounted(true);
@@ -88,10 +93,10 @@ export default function HexQuery() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const submitQuestion = async (rawQuestion: string) => {
+    const question = rawQuestion.trim();
+    if (!question || isLoading) return;
 
-    const question = inputValue.trim();
     setInputValue('');
     addUserMessage(question);
     setIsLoading(true);
@@ -111,6 +116,7 @@ export default function HexQuery() {
       const result: QueryResult = await response.json();
       console.log('Query result:', result);
 
+<<<<<<< HEAD
       // Check if this is a prescription map request
       if (result.intent === 'prescription_map') {
         console.log('Prescription map intent detected!');
@@ -150,10 +156,17 @@ export default function HexQuery() {
           ).join('\n')
         );
 
+=======
+      addBotMessage(result.summary, result.sql, `Found ${result.count.toLocaleString()} result(s)`);
+
+      if (result.hex_ids && result.hex_ids.length > 0) {
+        setHighlightedHexes(new Set(result.hex_ids));
+>>>>>>> 76ae5aa (Add new assistant chat homepage)
       } else {
         // Normal query flow
         setIsLoading(false);
 
+<<<<<<< HEAD
         // Add bot message
         addBotMessage(result.summary, result.sql, `Found ${result.count.toLocaleString()} result(s)`);
 
@@ -168,12 +181,32 @@ export default function HexQuery() {
         if (result.results && result.results.length > 0 && result.hex_ids.length === 0) {
           displayDetailedResults(result.results);
         }
+=======
+      if (result.results && result.results.length > 0 && result.hex_ids.length === 0) {
+        displayDetailedResults(result.results);
+>>>>>>> 76ae5aa (Add new assistant chat homepage)
       }
     } catch (error) {
       setIsLoading(false);
       addErrorMessage(error instanceof Error ? error.message : 'Query failed. Please try again.');
     }
   };
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
+    await submitQuestion(inputValue);
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!initialQuestion) return;
+    if (lastAutoQuestionRef.current === initialQuestion) return;
+
+    lastAutoQuestionRef.current = initialQuestion;
+    setInputValue(initialQuestion);
+    submitQuestion(initialQuestion);
+  }, [mounted, initialQuestion]);
+
 
   const addUserMessage = (text: string) => {
     setMessages(prev => [...prev, { type: 'user', text }]);
