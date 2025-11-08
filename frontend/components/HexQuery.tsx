@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -47,6 +48,13 @@ const FIELD_KEYWORDS: Array<{ field: string; keywords: string[] }> = [
   { field: FIELD_NAMES.NORTH_OF_ROAD, keywords: ['north of road', 'north field', 'north-of-road'] },
   { field: FIELD_NAMES.SOUTH_OF_ROAD, keywords: ['south of road', 'south field', 'south-of-road'] },
   { field: FIELD_NAMES.RAILROAD_PIVOT, keywords: ['railroad pivot', 'railroad field', 'pivot'] }
+];
+
+const QUICK_PROMPTS = [
+  'Highlight fields with low phosphorus this month.',
+  'Show me hexes that need more than 100 units of nitrogen.',
+  'Compare yield targets across all fields.',
+  'Where should we prioritize potassium applications?'
 ];
 
 function detectFieldFromQuestion(question: string): string | null {
@@ -103,6 +111,7 @@ export default function HexQuery() {
     bearing: 0
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesRef = useRef<Message[]>([
     {
       type: 'bot',
@@ -351,6 +360,9 @@ export default function HexQuery() {
         return base;
       }); // Keep welcome message
       setHighlightedHexes(new Set());
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('assistantChatHistory');
+      }
     } catch (error) {
       console.error('Failed to clear history:', error);
     }
@@ -402,6 +414,17 @@ export default function HexQuery() {
   const YIELD_STOPS = [0, 125, 250];
   const YIELD_COLORS = ['#a50426', '#fefdbd', '#016937'];
 
+  const handlePromptSelect = (prompt: string) => {
+    setInputValue(prompt);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const canSend = inputValue.trim().length > 0 && !isLoading;
+  const layoutClass = showMap
+    ? 'hex-query-layout hex-query-layout--map'
+    : 'hex-query-layout hex-query-layout--solo';
+
+  // Colors matching the original config
   const COLORS = {
     HIGHLIGHTED: [255, 100, 100, 220],   // Red
     HOVER: [255, 200, 100, 220]          // Orange
@@ -751,87 +774,15 @@ export default function HexQuery() {
                 animation: 'fadeIn 0.3s ease-in'
               }}
             >
-              <div style={{
-                padding: '12px 16px',
-                maxWidth: '320px',
-                wordWrap: 'break-word',
-                background: message.type === 'user' 
-                  ? '#3b82f6' 
-                  : message.type === 'error'
-                  ? '#fee2e2'
-                  : '#f3f4f6',
-                color: message.type === 'user' 
-                  ? 'white' 
-                  : message.type === 'error'
-                  ? '#991b1b'
-                  : '#1f2937',
-                borderRadius: message.type === 'user'
-                  ? '18px 18px 4px 18px'
-                  : '18px 18px 18px 4px'
-              }}>
-                <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.text}</p>
-                {message.metadata && (
-                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                    {message.metadata}
-                  </div>
-                )}
-                {message.sql && (
-                  <div style={{
-                    marginTop: '8px',
-                    padding: '8px',
-                    background: '#1f2937',
-                    color: '#10b981',
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    fontSize: '11px',
-                    overflowX: 'auto',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all'
-                  }}>
-                    {message.sql}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div style={{ alignSelf: 'flex-start' }}>
-              <div style={{
-                padding: '12px 16px',
-                background: '#f3f4f6',
-                borderRadius: '18px 18px 18px 4px',
-                display: 'flex',
-                gap: '4px'
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both',
-                  animationDelay: '-0.16s'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both',
-                  animationDelay: '-0.32s'
-                }} />
-              </div>
+              <p>
+                Mapbox token not configured. Please set NEXT_PUBLIC_MAPBOX_TOKEN in your environment
+                variables.
+              </p>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={tooltipRef} className="hex-query-tooltip" />
         </div>
+      )}
 
         {/* Chat Input */}
         <div style={{
@@ -886,43 +837,114 @@ export default function HexQuery() {
             Send
           </button>
         </div>
-      </div>
+      <div className="hex-query-layout__assistant">
+        <aside
+          className={`assistant-pane assistant-pane--embedded ${
+            showMap ? 'assistant-pane--map' : 'assistant-pane--dialog'
+          }`}
+        >
+          <div className="assistant-pane__surface">
+            <header className="assistant-pane__header">
+              <div>
+                <p className="assistant-pane__title">Query Assistant</p>
+                <p className="assistant-pane__subtitle">
+                  Ask about fields, nutrients, or yield trends. I&apos;ll pull maps whenever you need a
+                  visual.
+                </p>
+              </div>
+              <div className="assistant-pane__action-row">
+                {showMap && (
+                  <Link href="/" className="assistant-pane__action-btn">
+                    Dashboard
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  className="assistant-pane__action-btn assistant-pane__action-btn--danger"
+                  onClick={handleClearHistory}
+                >
+                  Clear history
+                </button>
+              </div>
+            </header>
 
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes bounce {
-          0%, 80%, 100% {
-            transform: scale(0);
-          }
-          40% {
-            transform: scale(1);
-          }
-        }
-        .tooltip {
-          display: none;
-        }
-        .tooltip.show {
-          display: block;
-        }
-        .tooltip-row {
-          display: flex;
-          justify-content: space-between;
-          margin: 4px 0;
-        }
-        .tooltip-label {
-          font-weight: 600;
-          margin-right: 8px;
-        }
-      `}</style>
+            <div className="assistant-pane__messages">
+              {messages.map((message, index) => {
+                const roleClass =
+                  message.type === 'user'
+                    ? 'assistant-pane__bubble--user'
+                    : message.type === 'error'
+                      ? 'assistant-pane__bubble--error'
+                      : 'assistant-pane__bubble--assistant';
+                return (
+                  <div key={index} className={`assistant-pane__bubble ${roleClass}`}>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
+                    {message.metadata && (
+                      <div className="assistant-pane__meta">{message.metadata}</div>
+                    )}
+                    {message.sql && (
+                      <pre className="assistant-pane__sql" aria-label="Generated SQL">
+                        {message.sql}
+                      </pre>
+                    )}
+                  </div>
+                );
+              })}
+              {isLoading && (
+                <div className="assistant-pane__bubble assistant-pane__bubble--assistant assistant-pane__bubble--thinking">
+                  <span className="assistant-pane__dot" />
+                  <span className="assistant-pane__dot" />
+                  <span className="assistant-pane__dot" />
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="assistant-pane__quick">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="assistant-pane__quick-btn"
+                  onClick={() => handlePromptSelect(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            <form
+              className="assistant-pane__composer"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (canSend) {
+                  handleSend();
+                }
+              }}
+            >
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (canSend) {
+                      handleSend();
+                    }
+                  }
+                }}
+                placeholder="Ask a question about your field data..."
+                className="assistant-pane__input"
+                rows={2}
+              />
+              <button type="submit" className="assistant-pane__send" disabled={!canSend}>
+                Send
+              </button>
+            </form>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
