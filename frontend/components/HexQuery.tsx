@@ -5,10 +5,32 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { FIELD_NAMES, FIELD_CENTERS } from '../constants';
 
 // Dynamically import deck.gl components (client-side only)
 const DeckGL = dynamic(() => import('@deck.gl/react').then(mod => ({ default: mod.DeckGL })), { ssr: false });
 const Map = dynamic(() => import('react-map-gl').then(mod => ({ default: mod.Map })), { ssr: false });
+
+const VISUALIZATION_KEYWORDS = [
+  'show me',
+  'show the',
+  'where in the field',
+  'where are',
+  'highlight',
+  'map',
+  'visual',
+  'visualize',
+  'display',
+  'plot',
+  'heatmap',
+  'layer'
+];
+
+function questionRequiresVisualization(question: string) {
+  const normalized = (question || '').toLowerCase();
+  if (!normalized) return false;
+  return VISUALIZATION_KEYWORDS.some(keyword => normalized.includes(keyword));
+}
 
 interface QueryResult {
   question: string;
@@ -103,6 +125,8 @@ export default function HexQuery() {
   const [hoveredHex, setHoveredHex] = useState<string | null>(null);
   const [prescriptionMaps, setPrescriptionMaps] = useState<any[]>([]);
   const [selectedPrescriptionLayer, setSelectedPrescriptionLayer] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [shouldAnimateToMap, setShouldAnimateToMap] = useState(false);
   const [viewState, setViewState] = useState({
     longitude: -86.685,
     latitude: 32.433,
@@ -573,205 +597,124 @@ export default function HexQuery() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      {/* Back Button */}
-      <a
-        href="/"
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          zIndex: 1000,
-          padding: '10px 20px',
-          backgroundColor: 'rgba(45, 80, 22, 0.9)',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: 600,
-          transition: 'background-color 0.2s',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(45, 80, 22, 0.9)';
-        }}
-      >
-        ← Back to Dashboard
-      </a>
+    <div className={layoutClass}>
+      {showMap && (
+        <div className="hex-query-map" id="map-container">
+          <Link href="/" className="hex-query-back">
+            ← Back to Dashboard
+          </Link>
 
-      {/* Map Section */}
-      <div 
-        id="map-container"
-        style={{ 
-          flex: 1, 
-          position: 'relative', 
-          backgroundColor: '#1a1a1a', 
-          width: '100%', 
-          height: '100vh',
-          overflow: 'hidden'
-        }}
-      >
-        {mounted && DeckGL && Map && (
-          <>
-            {process.env.NODE_ENV === 'development' && (
-              <div style={{
-                position: 'absolute',
-                top: '60px',
-                left: '20px',
-                zIndex: 1000,
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                padding: '10px',
-                fontSize: '12px',
-                borderRadius: '4px'
-              }}>
-                <div>Layers: {layersState.length}</div>
-                <div>GeoJSON: {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}</div>
-                <div>Highlighted: {highlightedHexes.size}</div>
-                <div>Hovered: {hoveredHex || 'none'}</div>
-              </div>
-            )}
-
-            {/* Prescription Map Layer Controls */}
-            {prescriptionMaps.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '20px',
-                right: '420px',
-                zIndex: 1000,
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
-                padding: '15px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-              }}>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  Prescription Maps
+          {mounted && DeckGL && Map && (
+            <>
+              {process.env.NODE_ENV === 'development' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '20px',
+                    zIndex: 1000,
+                    background: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    padding: '10px',
+                    fontSize: '12px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <div>Layers: {layersState.length}</div>
+                  <div>
+                    GeoJSON:{' '}
+                    {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}
+                  </div>
+                  <div>Highlighted: {highlightedHexes.size}</div>
+                  <div>Hovered: {hoveredHex || 'none'}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="prescription-layer"
-                      checked={selectedPrescriptionLayer === null}
-                      onChange={() => setSelectedPrescriptionLayer(null)}
-                      style={{ marginRight: '8px' }}
-                    />
-                    <span style={{ fontSize: '13px' }}>None (Show Data)</span>
-                  </label>
-                  {prescriptionMaps.map((pm) => (
-                    <label key={pm.pass} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              )}
+
+              {prescriptionMaps.length > 0 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '420px',
+                    zIndex: 1000,
+                    background: 'rgba(0,0,0,0.8)',
+                    color: 'white',
+                    padding: '15px',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
+                    Prescription Maps
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="prescription-layer"
-                        checked={selectedPrescriptionLayer === pm.pass}
-                        onChange={() => setSelectedPrescriptionLayer(pm.pass)}
+                        checked={selectedPrescriptionLayer === null}
+                        onChange={() => setSelectedPrescriptionLayer(null)}
                         style={{ marginRight: '8px' }}
                       />
-                      <span style={{ fontSize: '13px' }}>
-                        {pm.pass} ({pm.geojson.features[0].properties.rate} {pm.geojson.features[0].properties.unit})
-                      </span>
+                      <span style={{ fontSize: '13px' }}>None (Show Data)</span>
                     </label>
-                  ))}
+                    {prescriptionMaps.map((pm) => (
+                      <label
+                        key={pm.pass}
+                        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                      >
+                        <input
+                          type="radio"
+                          name="prescription-layer"
+                          checked={selectedPrescriptionLayer === pm.pass}
+                          onChange={() => setSelectedPrescriptionLayer(pm.pass)}
+                          style={{ marginRight: '8px' }}
+                        />
+                        <span style={{ fontSize: '13px' }}>
+                          {pm.pass} ({pm.geojson.features[0].properties.rate}{' '}
+                          {pm.geojson.features[0].properties.unit})
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <DeckGL
-              viewState={viewState}
-              onViewStateChange={(e: any) => setViewState(e.viewState)}
-              controller={true}
-              layers={layersState}
-              onHover={handleHover}
-              style={{ width: '100%', height: '100%' }}
-              getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
-              onLoad={() => console.log('DeckGL loaded, layers:', layersState.length)}
-              onError={(error: any) => console.error('DeckGL error:', error)}
-            >
-              <Map
-                reuseMaps
-                mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
-                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-                longitude={viewState.longitude}
-                latitude={viewState.latitude}
-                zoom={viewState.zoom}
-                pitch={viewState.pitch}
-                bearing={viewState.bearing}
-              />
-            </DeckGL>
-          </>
-        )}
-        {mounted && !process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'white',
-            textAlign: 'center',
-            zIndex: 1000
-          }}>
-            <p>Mapbox token not configured. Please set NEXT_PUBLIC_MAPBOX_TOKEN in your environment variables.</p>
-          </div>
-        )}
-      </div>
+              )}
 
-      {/* Chat Section */}
-      <div style={{
-        width: '400px',
-        background: 'white',
-        borderLeft: '1px solid #e5e7eb',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* Chat Header */}
-        <div style={{
-          padding: '20px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: '#f9fafb'
-        }}>
-          <h2 style={{ fontSize: '20px', color: '#1f2937', margin: 0 }}>
-            Query Assistant
-          </h2>
-          <button
-            onClick={handleClearHistory}
-            style={{
-              padding: '6px 12px',
-              background: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#ef4444'; }}
-          >
-            Clear History
-          </button>
-        </div>
+              <DeckGL
+                viewState={viewState}
+                onViewStateChange={(e: any) => setViewState(e.viewState)}
+                controller={true}
+                layers={layersState}
+                onHover={handleHover}
+                style={{ width: '100%', height: '100%' }}
+                getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
+                onLoad={() => console.log('DeckGL loaded, layers:', layersState.length)}
+                onError={(error: any) => console.error('DeckGL error:', error)}
+              >
+                <Map
+                  reuseMaps
+                  mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
+                  mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+                  longitude={viewState.longitude}
+                  latitude={viewState.latitude}
+                  zoom={viewState.zoom}
+                  pitch={viewState.pitch}
+                  bearing={viewState.bearing}
+                />
+              </DeckGL>
+            </>
+          )}
 
-        {/* Chat Messages */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px'
-        }}>
-          {messages.map((message, index) => (
+          {mounted && !process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
             <div
-              key={index}
               style={{
-                alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
-                animation: 'fadeIn 0.3s ease-in'
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'white',
+                textAlign: 'center',
+                zIndex: 1000
               }}
             >
               <p>
@@ -780,63 +723,11 @@ export default function HexQuery() {
               </p>
             </div>
           )}
+
           <div ref={tooltipRef} className="hex-query-tooltip" />
         </div>
       )}
 
-        {/* Chat Input */}
-        <div style={{
-          padding: '20px',
-          borderTop: '1px solid #e5e7eb',
-          display: 'flex',
-          gap: '8px',
-          background: 'white'
-        }}>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !isLoading) {
-                handleSend();
-              }
-            }}
-            placeholder="Ask a question about your field data..."
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '14px',
-              outline: 'none'
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={isLoading}
-            style={{
-              padding: '12px 24px',
-              background: isLoading ? '#9ca3af' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) e.currentTarget.style.background = '#2563eb';
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) e.currentTarget.style.background = '#3b82f6';
-            }}
-          >
-            Send
-          </button>
-        </div>
       <div className="hex-query-layout__assistant">
         <aside
           className={`assistant-pane assistant-pane--embedded ${
@@ -948,4 +839,3 @@ export default function HexQuery() {
     </div>
   );
 }
-
