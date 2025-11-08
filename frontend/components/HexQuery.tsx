@@ -667,19 +667,7 @@ export default function HexQuery() {
             ← Back to Dashboard
           </Link>
 
-      {/* Map Section */}
-      <div
-        id="map-container"
-        style={{
-          flex: 1,
-          position: 'relative',
-          backgroundColor: '#1a1a1a',
-          width: '100%',
-          height: '100vh',
-          overflow: 'hidden'
-        }}
-      >
-        {mounted && DeckGL && Map && (
+          {mounted && DeckGL && Map && (
           <>
             {process.env.NODE_ENV === 'development' && (
               <div style={{
@@ -702,205 +690,78 @@ export default function HexQuery() {
 
             {/* Prescription Map Layer Controls */}
             {prescriptionMaps.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '20px',
-                right: '420px',
-                zIndex: 1000,
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
-                padding: '15px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-              }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '420px',
+                  zIndex: 1000,
+                  background: 'rgba(0,0,0,0.8)',
+                  color: 'white',
+                  padding: '15px',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                }}
+              >
                 <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
                   Prescription Maps
                 </div>
-              )}
-
-              {prescriptionMaps.length > 0 && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '420px',
-                    zIndex: 1000,
-                    background: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
-                    Prescription Maps
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="prescription-layer"
+                      checked={selectedPrescriptionLayer === null}
+                      onChange={() => setSelectedPrescriptionLayer(null)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    <span style={{ fontSize: '13px' }}>None (Show Data)</span>
+                  </label>
+                  {prescriptionMaps.map((pm) => (
+                    <label
+                      key={pm.pass}
+                      style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                    >
                       <input
                         type="radio"
                         name="prescription-layer"
-                        checked={selectedPrescriptionLayer === null}
-                        onChange={() => setSelectedPrescriptionLayer(null)}
+                        checked={selectedPrescriptionLayer === pm.pass}
+                        onChange={() => setSelectedPrescriptionLayer(pm.pass)}
                         style={{ marginRight: '8px' }}
                       />
-                      <span style={{ fontSize: '13px' }}>None (Show Data)</span>
+                      <span style={{ fontSize: '13px' }}>
+                        {pm.pass} ({pm.geojson.features[0].properties.rate}{' '}
+                        {pm.geojson.features[0].properties.unit})
+                      </span>
                     </label>
-                    {prescriptionMaps.map((pm) => (
-                      <label
-                        key={pm.pass}
-                        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                      >
-                        <input
-                          type="radio"
-                          name="prescription-layer"
-                          checked={selectedPrescriptionLayer === pm.pass}
-                          onChange={() => setSelectedPrescriptionLayer(pm.pass)}
-                          style={{ marginRight: '8px' }}
-                        />
-                        <span style={{ fontSize: '13px' }}>
-                          {pm.pass} ({pm.geojson.features[0].properties.rate}{' '}
-                          {pm.geojson.features[0].properties.unit})
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              <DeckGL
-                viewState={viewState}
-                onViewStateChange={(e: any) => setViewState(e.viewState)}
-                controller={true}
-                layers={layersState}
-                onHover={handleHover}
-                style={{ width: '100%', height: '100%' }}
-                getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
-                onLoad={() => console.log('DeckGL loaded, layers:', layersState.length)}
-                onError={(error: any) => console.error('DeckGL error:', error)}
-              >
-                <Map
-                  reuseMaps
-                  mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
-                  mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-                  longitude={viewState.longitude}
-                  latitude={viewState.latitude}
-                  zoom={viewState.zoom}
-                  pitch={viewState.pitch}
-                  bearing={viewState.bearing}
-                />
-              </DeckGL>
-            </>
-          )}
-
-          {mounted && !process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                color: 'white',
-                textAlign: 'center',
-                zIndex: 1000
-              }}
+            <DeckGL
+              viewState={viewState}
+              onViewStateChange={(e: any) => setViewState(e.viewState)}
+              controller={true}
+              layers={layersState}
+              onHover={handleHover}
+              style={{ width: '100%', height: '100%' }}
+              getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
+              onLoad={() => console.log('DeckGL loaded, layers:', layersState.length)}
+              onError={(error: any) => console.error('DeckGL error:', error)}
             >
-              <div style={{
-                padding: '12px 16px',
-                maxWidth: '320px',
-                wordWrap: 'break-word',
-                background: message.type === 'user'
-                  ? '#3b82f6'
-                  : message.type === 'error'
-                  ? '#fee2e2'
-                  : '#f3f4f6',
-                color: message.type === 'user'
-                  ? 'white'
-                  : message.type === 'error'
-                  ? '#991b1b'
-                  : '#1f2937',
-                borderRadius: message.type === 'user'
-                  ? '18px 18px 4px 18px'
-                  : '18px 18px 18px 4px'
-              }}>
-                <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.text}</p>
-                {message.metadata && (
-                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                    {message.metadata}
-                  </div>
-                )}
-                {message.sql && (
-                  <details style={{ marginTop: '8px' }}>
-                    <summary style={{
-                      cursor: 'pointer',
-                      padding: '6px 8px',
-                      background: '#374151',
-                      color: '#9ca3af',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      userSelect: 'none',
-                      listStyle: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <span style={{ fontSize: '9px' }}>▶</span> View SQL Query
-                    </summary>
-                    <div style={{
-                      marginTop: '6px',
-                      padding: '8px',
-                      background: '#1f2937',
-                      color: '#10b981',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      fontSize: '11px',
-                      overflowX: 'auto',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all'
-                    }}>
-                      {message.sql}
-                    </div>
-                  </details>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div style={{ alignSelf: 'flex-start' }}>
-              <div style={{
-                padding: '12px 16px',
-                background: '#f3f4f6',
-                borderRadius: '18px 18px 18px 4px',
-                display: 'flex',
-                gap: '4px'
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both',
-                  animationDelay: '-0.16s'
-                }} />
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  background: '#9ca3af',
-                  borderRadius: '50%',
-                  animation: 'bounce 1.4s infinite ease-in-out both',
-                  animationDelay: '-0.32s'
-                }} />
-              </div>
-            </div>
+              <Map
+                reuseMaps
+                mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}
+                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+                longitude={viewState.longitude}
+                latitude={viewState.latitude}
+                zoom={viewState.zoom}
+                pitch={viewState.pitch}
+                bearing={viewState.bearing}
+              />
+            </DeckGL>
+            </>
           )}
 
           <div ref={tooltipRef} className="hex-query-tooltip" />
