@@ -513,6 +513,11 @@ export default function HexQuery() {
         return interpolateColor(yieldTarget, YIELD_STOPS, YIELD_COLORS);
       };
 
+      // Get line width based on zoom level
+      const getLineWidth = (feature: any) => {
+        return viewState.zoom < 15 ? 0 : 0.5;
+      };
+
       const layer: any = new (GeoJsonLayer as any)({
         id: 'hex-layer',
         data: geoJsonData,
@@ -525,10 +530,11 @@ export default function HexQuery() {
         elevationScale: 0,
         getFillColor: getFillColor,
         getLineColor: [40, 40, 40, 100],
-        getLineWidth: 0.1,
-        lineWidthMinPixels: 1.0,
+        getLineWidth: getLineWidth,
+        lineWidthMinPixels: 0,
         updateTriggers: {
-          getFillColor: [Array.from(highlightedHexes), hoveredHex, selectedPrescriptionLayer]
+          getFillColor: [Array.from(highlightedHexes), hoveredHex, selectedPrescriptionLayer],
+          getLineWidth: [viewState.zoom]
         },
         visible: true,
         opacity: 1
@@ -540,20 +546,20 @@ export default function HexQuery() {
       console.error('Failed to load deck.gl layers:', error);
       setLayersState([]);
     });
-  }, [mounted, geoJsonData, highlightedHexes, hoveredHex, prescriptionMaps, selectedPrescriptionLayer]);
+  }, [mounted, geoJsonData, highlightedHexes, hoveredHex, prescriptionMaps, selectedPrescriptionLayer, viewState.zoom]);
 
   // Handle hover events
   const handleHover = (info: any) => {
     if (info.object) {
       const props = info.object.properties;
       setHoveredHex(props.h3_index);
-      
+
       // Update tooltip position and content
       if (tooltipRef.current) {
         tooltipRef.current.style.left = info.x + 'px';
         tooltipRef.current.style.top = info.y + 'px';
         tooltipRef.current.classList.add('show');
-        
+
         tooltipRef.current.innerHTML = `
           <div style="font-weight: bold; margin-bottom: 8px;">Hex: ${props.h3_index.substring(0, 12)}...</div>
           <div class="tooltip-row">
@@ -604,29 +610,54 @@ export default function HexQuery() {
             ← Back to Dashboard
           </Link>
 
-          {mounted && DeckGL && Map && (
-            <>
-              {process.env.NODE_ENV === 'development' && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '60px',
-                    left: '20px',
-                    zIndex: 1000,
-                    background: 'rgba(0,0,0,0.7)',
-                    color: 'white',
-                    padding: '10px',
-                    fontSize: '12px',
-                    borderRadius: '4px'
-                  }}
-                >
-                  <div>Layers: {layersState.length}</div>
-                  <div>
-                    GeoJSON:{' '}
-                    {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}
-                  </div>
-                  <div>Highlighted: {highlightedHexes.size}</div>
-                  <div>Hovered: {hoveredHex || 'none'}</div>
+      {/* Map Section */}
+      <div
+        id="map-container"
+        style={{
+          flex: 1,
+          position: 'relative',
+          backgroundColor: '#1a1a1a',
+          width: '100%',
+          height: '100vh',
+          overflow: 'hidden'
+        }}
+      >
+        {mounted && DeckGL && Map && (
+          <>
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{
+                position: 'absolute',
+                top: '60px',
+                left: '20px',
+                zIndex: 1000,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '10px',
+                fontSize: '12px',
+                borderRadius: '4px'
+              }}>
+                <div>Layers: {layersState.length}</div>
+                <div>GeoJSON: {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}</div>
+                <div>Highlighted: {highlightedHexes.size}</div>
+                <div>Hovered: {hoveredHex || 'none'}</div>
+              </div>
+            )}
+
+            {/* Prescription Map Layer Controls */}
+            {prescriptionMaps.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '20px',
+                right: '420px',
+                zIndex: 1000,
+                background: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  Prescription Maps
                 </div>
               )}
 
@@ -721,13 +752,13 @@ export default function HexQuery() {
                 padding: '12px 16px',
                 maxWidth: '320px',
                 wordWrap: 'break-word',
-                background: message.type === 'user' 
-                  ? '#3b82f6' 
+                background: message.type === 'user'
+                  ? '#3b82f6'
                   : message.type === 'error'
                   ? '#fee2e2'
                   : '#f3f4f6',
-                color: message.type === 'user' 
-                  ? 'white' 
+                color: message.type === 'user'
+                  ? 'white'
                   : message.type === 'error'
                   ? '#991b1b'
                   : '#1f2937',
@@ -778,7 +809,7 @@ export default function HexQuery() {
               </div>
             </div>
           ))}
-          
+
           {isLoading && (
             <div style={{ alignSelf: 'flex-start' }}>
               <div style={{
