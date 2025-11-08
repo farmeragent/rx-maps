@@ -467,24 +467,15 @@ export default function HexQuery() {
 
     console.log('Creating layers with', geoJsonData.features.length, 'features');
 
-    // Dynamically import GeoJsonLayer when needed
-    import('@deck.gl/layers').then(({ GeoJsonLayer }) => {
+    // Dynamically import GeoJsonLayer and PolygonLayer when needed
+    Promise.all([
+      import('@deck.gl/layers').then(mod => mod.GeoJsonLayer),
+      import('@deck.gl/layers').then(mod => mod.PolygonLayer)
+    ]).then(([GeoJsonLayer, PolygonLayer]) => {
       const layers: any[] = [];
 
-      // Get fill color for hex based on state
-      const getFillColor = (feature: any) => {
-        const h3Index = feature.properties.h3_index;
-
-        // Hover state (highest priority)
-        if (hoveredHex === h3Index) {
-          return COLORS.HOVER;
-        }
-
-        // Highlighted state
-        if (highlightedHexes.has(h3Index)) {
-          return COLORS.HIGHLIGHTED;
-        }
-
+      // Helper function to get base color (without highlighting logic)
+      const getBaseColor = (feature: any) => {
         // If prescription layer is selected, color by application rate
         if (selectedPrescriptionLayer && prescriptionMaps.length > 0) {
           let value = 0;
@@ -513,13 +504,26 @@ export default function HexQuery() {
         return interpolateColor(yieldTarget, YIELD_STOPS, YIELD_COLORS);
       };
 
+      // Get fill color for hex based on state
+      const getFillColor = (feature: any) => {
+        const h3Index = feature.properties.h3_index;
+
+        // Hover state (highest priority)
+        if (hoveredHex === h3Index) {
+          return COLORS.HOVER;
+        }
+
+        return getBaseColor(feature);
+      };
+
       // Get line width based on zoom level
       const getLineWidth = (feature: any) => {
         return viewState.zoom < 15 ? 0 : 0.5;
       };
 
-      const layer: any = new (GeoJsonLayer as any)({
-        id: 'hex-layer',
+      // Base layer: All hexes
+      const baseLayer: any = new (GeoJsonLayer as any)({
+        id: 'hex-layer-base',
         data: geoJsonData,
         pickable: true,
         stroked: true,
@@ -533,13 +537,66 @@ export default function HexQuery() {
         getLineWidth: getLineWidth,
         lineWidthMinPixels: 0,
         updateTriggers: {
-          getFillColor: [Array.from(highlightedHexes), hoveredHex, selectedPrescriptionLayer],
+          getFillColor: [hoveredHex, selectedPrescriptionLayer],
           getLineWidth: [viewState.zoom]
         },
         visible: true,
         opacity: 1
       });
-      layers.push(layer);
+      layers.push(baseLayer);
+
+      // Overlay layer: Semi-transparent rectangle (only when highlighting)
+      if (highlightedHexes.size > 0) {
+        const overlayLayer: any = new (PolygonLayer as any)({
+          id: 'dim-overlay',
+          data: [{
+            polygon: [
+              [-180, -90],
+              [-180, 90],
+              [180, 90],
+              [180, -90]
+            ]
+          }],
+          getPolygon: (d: any) => d.polygon,
+          getFillColor: [0, 0, 0, 150],
+          getLineColor: [0, 0, 0, 0],
+          pickable: false,
+          stroked: false,
+          filled: true
+        });
+        layers.push(overlayLayer);
+
+        // Highlighted hexes layer: Only highlighted hexes at full brightness
+        const highlightedData = {
+          ...geoJsonData,
+          features: geoJsonData.features.filter((f: any) =>
+            highlightedHexes.has(f.properties.h3_index)
+          )
+        };
+
+        const highlightedLayer: any = new (GeoJsonLayer as any)({
+          id: 'hex-layer-highlighted',
+          data: highlightedData,
+          pickable: true,
+          stroked: true,
+          filled: true,
+          extruded: false,
+          wireframe: false,
+          getElevation: 0,
+          elevationScale: 0,
+          getFillColor: getFillColor,
+          getLineColor: [40, 40, 40, 100],
+          getLineWidth: getLineWidth,
+          lineWidthMinPixels: 0,
+          updateTriggers: {
+            getFillColor: [hoveredHex, selectedPrescriptionLayer],
+            getLineWidth: [viewState.zoom]
+          },
+          visible: true,
+          opacity: 1
+        });
+        layers.push(highlightedLayer);
+      }
 
       setLayersState(layers);
     }).catch((error) => {
