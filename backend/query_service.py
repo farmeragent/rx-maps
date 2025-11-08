@@ -271,6 +271,85 @@ User request: """
             "summary": summary
         }
 
+    def _calculate_acreage(self, hex_count: int) -> float:
+        """
+        Calculate acreage from hex count
+        H3 resolution 10 hexagons are approximately 0.015 km² each
+        1 km² = 247.105 acres
+        """
+        km_per_hex = 0.015
+        acres_per_km = 247.105
+        return hex_count * km_per_hex * acres_per_km
+
+    def _generate_natural_language_summary(self, question: str, sql: str, results: List[Dict], hex_count: int) -> str:
+        """
+        Generate a personable, natural language summary using Claude
+
+        Args:
+            question: User's original question
+            sql: Generated SQL query
+            results: Query results (may be empty for hex queries)
+            hex_count: Number of hexes returned
+
+        Returns:
+            Natural language summary string
+        """
+        # Calculate acreage if we have hexes
+        acreage = self._calculate_acreage(hex_count) if hex_count > 0 else 0
+
+        # Build context for Claude
+        context = f"""User asked: "{question}"
+
+SQL query executed: {sql}
+
+Results: {hex_count} hexes found"""
+
+        if acreage > 0:
+            context += f"\nAcreage: {acreage:.2f} acres"
+
+        # Add sample results if available
+        if results and len(results) > 0:
+            sample_result = results[0]
+            context += f"\nSample result: {sample_result}"
+
+        prompt = f"""{context}
+
+Generate a friendly, conversational summary of these query results.
+
+Requirements:
+- Start with "I found" (first person, personable tone)
+- Include the acreage when relevant
+- Explain what conditions were checked in plain English
+- Be specific about threshold values that were used
+- Keep it concise (1-2 sentences max)
+- Use natural, conversational language
+
+Example style: "I found 2.34 acres where we should apply lime (pH was below 6.0 and calcium was below 1800 lbs per acre)."
+
+Your summary:"""
+
+        try:
+            response = self.client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=256,
+                messages=[{
+                    "role": "user",
+                    "content": prompt
+                }]
+            )
+
+            summary = response.content[0].text.strip()
+            # Remove quotes if Claude wrapped the response
+            if summary.startswith('"') and summary.endswith('"'):
+                summary = summary[1:-1]
+
+            return summary
+
+        except Exception as e:
+            # Fallback to simple summary if API call fails
+            print(f"Failed to generate natural language summary: {str(e)}")
+            return f"Found {hex_count:,} hexes matching your query."
+
     def _generate_summary(self, question: str, results: List[Dict], sql: str) -> str:
         """Generate a human-readable summary of query results"""
         if not results:
@@ -284,9 +363,9 @@ User request: """
             value = results[0][key]
             return f"Result: {value:,}" if isinstance(value, (int, float)) else f"Result: {value}"
 
-        # Check if query returns hex_ids (for highlighting)
+        # Check if query returns hex_ids (for highlighting) - use natural language
         if 'h3_index' in results[0]:
-            return f"Found {count:,} hexes matching your query."
+            return self._generate_natural_language_summary(question, sql, results, count)
 
         # For aggregation queries
         if count == 1:

@@ -273,8 +273,8 @@ export default function HexQuery() {
         // Normal query flow
         setIsLoading(false);
 
-        // Add bot message
-        addBotMessage(result.summary, result.sql, `Found ${result.count.toLocaleString()} result(s)`);
+        // Add bot message (summary now includes natural language description)
+        addBotMessage(result.summary, result.sql);
 
         // Highlight hexes on map
         if (result.hex_ids && result.hex_ids.length > 0) {
