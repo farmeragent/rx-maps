@@ -717,10 +717,101 @@ export default function HexQuery() {
                 zIndex: 1000
               }}
             >
-              <p>
-                Mapbox token not configured. Please set NEXT_PUBLIC_MAPBOX_TOKEN in your environment
-                variables.
-              </p>
+              <div style={{
+                padding: '12px 16px',
+                maxWidth: '320px',
+                wordWrap: 'break-word',
+                background: message.type === 'user' 
+                  ? '#3b82f6' 
+                  : message.type === 'error'
+                  ? '#fee2e2'
+                  : '#f3f4f6',
+                color: message.type === 'user' 
+                  ? 'white' 
+                  : message.type === 'error'
+                  ? '#991b1b'
+                  : '#1f2937',
+                borderRadius: message.type === 'user'
+                  ? '18px 18px 4px 18px'
+                  : '18px 18px 18px 4px'
+              }}>
+                <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.text}</p>
+                {message.metadata && (
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                    {message.metadata}
+                  </div>
+                )}
+                {message.sql && (
+                  <details style={{ marginTop: '8px' }}>
+                    <summary style={{
+                      cursor: 'pointer',
+                      padding: '6px 8px',
+                      background: '#374151',
+                      color: '#9ca3af',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      userSelect: 'none',
+                      listStyle: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span style={{ fontSize: '9px' }}>▶</span> View SQL Query
+                    </summary>
+                    <div style={{
+                      marginTop: '6px',
+                      padding: '8px',
+                      background: '#1f2937',
+                      color: '#10b981',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      overflowX: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all'
+                    }}>
+                      {message.sql}
+                    </div>
+                  </details>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div style={{ alignSelf: 'flex-start' }}>
+              <div style={{
+                padding: '12px 16px',
+                background: '#f3f4f6',
+                borderRadius: '18px 18px 18px 4px',
+                display: 'flex',
+                gap: '4px'
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  background: '#9ca3af',
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s infinite ease-in-out both'
+                }} />
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  background: '#9ca3af',
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s infinite ease-in-out both',
+                  animationDelay: '-0.16s'
+                }} />
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  background: '#9ca3af',
+                  borderRadius: '50%',
+                  animation: 'bounce 1.4s infinite ease-in-out both',
+                  animationDelay: '-0.32s'
+                }} />
+              </div>
             </div>
           )}
 
@@ -836,6 +927,52 @@ export default function HexQuery() {
           </div>
         </aside>
       </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes bounce {
+          0%, 80%, 100% {
+            transform: scale(0);
+          }
+          40% {
+            transform: scale(1);
+          }
+        }
+        .tooltip {
+          display: none;
+        }
+        .tooltip.show {
+          display: block;
+        }
+        .tooltip-row {
+          display: flex;
+          justify-content: space-between;
+          margin: 4px 0;
+        }
+        .tooltip-label {
+          font-weight: 600;
+          margin-right: 8px;
+        }
+        details[open] summary span {
+          transform: rotate(90deg);
+        }
+        details summary span {
+          display: inline-block;
+          transition: transform 0.2s ease;
+        }
+        details summary:hover {
+          background: #4b5563 !important;
+        }
+      `}</style>
     </div>
   );
 }
