@@ -60,18 +60,18 @@ def load_geojson_files():
     # Database path (same directory as script)
     db_path = str(Path(__file__).parent / "agricultural_data.db")
 
-    # GeoJSON files to load with their field names (same directory as script)
+    # GeoJSON files to load with their field names (in fied-geojsons subdirectory)
     geojson_files = [
         {
-            "path": str(Path(__file__).parent / "north-of-road-high-res.geojson"),
+            "path": str(Path(__file__).parent / "fied-geojsons" / "north-of-road-high-res.geojson"),
             "field_name": "North of Road"
         },
         {
-            "path": str(Path(__file__).parent / "railroad-pivot-high-res.geojson"),
+            "path": str(Path(__file__).parent / "fied-geojsons" / "railroad-pivot-high-res.geojson"),
             "field_name": "Railroad Pivot"
         },
         {
-            "path": str(Path(__file__).parent / "south-of-road-high-res.geojson"),
+            "path": str(Path(__file__).parent / "fied-geojsons" / "south-of-road-high-res.geojson"),
             "field_name": "South of Road"
         }
     ]

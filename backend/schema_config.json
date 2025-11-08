@@ -17,6 +17,12 @@
       "values": ["North of Road", "Railroad Pivot", "South of Road"]
     },
     {
+      "name": "area",
+      "type": "DOUBLE",
+      "description": "The area of ground the hex takes up.",
+      "unit": "acre"
+    },
+    {
       "name": "yield_target",
       "type": "DOUBLE",
       "description": "The farmer's intended yield goal for the hexagon",
@@ -64,6 +70,59 @@
       "notes": "Nitrogen is typically very low in soil tests as it's highly mobile. Most N comes from fertilizer application."
     },
     {
+      "name": "calcium",
+      "type": "DOUBLE",
+      "description": "Current calcium level in soil",
+      "unit": "lbs per acre",
+      "thresholds": {
+        "low": "< 1800",
+        "medium": "1800-2400",
+        "high": "> 2400"
+      },
+      "notes": "Calcium is important in soil because it strengthens plant cell walls, promotes root and shoot growth, and is essential for improving soil structure (aggregation and permeability)"
+    },
+    {
+      "name": "magnesium",
+      "type": "DOUBLE",
+      "description": "Current magnesium level in soil",
+      "unit": "lbs per acre",
+      "thresholds": {
+        "low": "< 100",
+        "medium": "100-500",
+        "high": "> 500"
+      },
+      "notes": "An essential secondary nutrient, a critical component of the chlorophyll molecule required for photosynthesis in plants."
+    },
+    {
+      "name": "cec",
+      "type": "DOUBLE",
+      "description": "Current CEC (Cation Exchange Capacity) level in soil",
+      "unit": "meq / 100g",
+      "thresholds": {
+        "pure sand": "<5",
+        "sandy loams": "5-10",
+        "loams": "10",
+        "silt loams": "15-22",
+        "clay loams": "22-30",
+        "heavy clay": "25-50",
+        "organic": ">50"
+      },
+      "notes": "Measure of a soil's ability to hold and supply positively charged nutrient ions (cations) like potassium, calcium, and magnesium, thereby serving as a reservoir for plant nutrition."
+    },
+    {
+      "name": "pH",
+      "type": "DOUBLE",
+      "description": "The acidity or alkalinity of the soil",
+      "thresholds": {
+        "toxic": "< 5.5",
+        "low": "5.5-6.0",
+        "medium": "6.0-6.5",
+        "high": "6.5-7.5",
+        "alkaline": ">7.5"
+      },
+      "notes": "Expressed on a scale from 0 to 14, and fundamentally dictates the availability of nutrients to the plant."
+    },
+    {
       "name": "N_to_apply",
       "type": "DOUBLE",
       "description": "Recommended nitrogen fertilizer application amount",
@@ -106,6 +165,7 @@
     "Phosphorus fertilizer prices vary but average $0.3465 per lb P",
     "Potassium fertilizer prices average $0.202 per lb K2O",
     "Nitrogen fertilizer prices average $0.45-0.65 per lb N",
-    "Variable rate application saves money by only applying where needed"
+    "Variable rate application saves money by only applying where needed",
+    "You should apply lime to a part of the field where calcium levels are low, and pH is low."
   ]
 }
