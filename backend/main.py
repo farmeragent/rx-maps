@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from query_service import QueryService
 from database import get_db
+from prescription_service import PrescriptionService
 
 # Load environment variables
 load_dotenv()
@@ -53,7 +54,9 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     question: str
-    sql: str
+    intent: Optional[str] = "query"
+    field_name: Optional[str] = None
+    sql: Optional[str] = None
     results: List[Dict[str, Any]]
     hex_ids: List[str]
     count: int
@@ -138,6 +141,7 @@ async def query_database(request: QueryRequest):
         return QueryResponse(
             question=result['question'],
             sql=result['sql'],
+            intent=result['intent'],
             results=result['results'],
             hex_ids=result['hex_ids'],
             count=result['count'],
@@ -163,6 +167,34 @@ async def clear_query_history():
 
     query_service.clear_history()
     return {"message": "Conversation history cleared"}
+
+
+@app.post("/api/prescription-map")
+async def create_prescription_map(field_name: str = "North of Road"):
+    """
+    Create prescription maps for N, P, and K application
+
+    Args:
+        field_name: Name of the field to create prescriptions for
+
+    Returns:
+        List of prescription map passes with GeoJSON data
+    """
+    try:
+        prescription_service = PrescriptionService()
+        prescription_maps = prescription_service.create_prescription_maps(field_name)
+
+        return {
+            "success": True,
+            "prescription_maps": [pm.to_dict() for pm in prescription_maps],
+            "summary": {
+                "total_passes": len(prescription_maps),
+                "field_name": field_name
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create prescription map: {str(e)}")
 
 
 @app.post("/api/query/sql")

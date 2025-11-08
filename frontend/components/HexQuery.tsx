@@ -10,7 +10,9 @@ const Map = dynamic(() => import('react-map-gl').then(mod => ({ default: mod.Map
 
 interface QueryResult {
   question: string;
-  sql: string;
+  intent?: string;
+  field_name?: string;
+  sql?: string;
   results: any[];
   hex_ids: string[];
   count: number;
@@ -41,6 +43,8 @@ export default function HexQuery() {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [highlightedHexes, setHighlightedHexes] = useState<Set<string>>(new Set());
   const [hoveredHex, setHoveredHex] = useState<string | null>(null);
+  const [prescriptionMaps, setPrescriptionMaps] = useState<any[]>([]);
+  const [selectedPrescriptionLayer, setSelectedPrescriptionLayer] = useState<string | null>(null);
   const [viewState, setViewState] = useState({
     longitude: -86.685,
     latitude: 32.433,
@@ -105,21 +109,65 @@ export default function HexQuery() {
       }
 
       const result: QueryResult = await response.json();
-      setIsLoading(false);
+      console.log('Query result:', result);
 
-      // Add bot message
-      addBotMessage(result.summary, result.sql, `Found ${result.count.toLocaleString()} result(s)`);
+      // Check if this is a prescription map request
+      if (result.intent === 'prescription_map') {
+        console.log('Prescription map intent detected!');
+        // Add initial bot message
+        addBotMessage(result.summary);
 
-      // Highlight hexes on map
-      if (result.hex_ids && result.hex_ids.length > 0) {
-        setHighlightedHexes(new Set(result.hex_ids));
+        // Call prescription map API
+        console.log('Calling prescription map API with field:', result.field_name || 'North of Road');
+        const prescriptionResponse = await fetch('/api/prescription-map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field_name: result.field_name || 'North of Road' })
+        });
+
+        console.log('Prescription response status:', prescriptionResponse.status);
+
+        if (!prescriptionResponse.ok) {
+          throw new Error('Failed to create prescription map');
+        }
+
+        const prescriptionData = await prescriptionResponse.json();
+        setIsLoading(false);
+
+        // Store prescription maps and select first layer
+        if (prescriptionData.prescription_maps && prescriptionData.prescription_maps.length > 0) {
+          setPrescriptionMaps(prescriptionData.prescription_maps);
+          setSelectedPrescriptionLayer(prescriptionData.prescription_maps[0].pass);
+          setHighlightedHexes(new Set()); // Clear highlighted hexes
+        }
+
+        // Add success message
+        const passCount = prescriptionData.prescription_maps?.length || 0;
+        addBotMessage(
+          `✓ Created ${passCount} prescription passes for ${prescriptionData.summary?.field_name || 'the field'}:\n` +
+          prescriptionData.prescription_maps.map((pm: any) =>
+            `• ${pm.pass}: ${pm.geojson.features[0].properties.rate} ${pm.geojson.features[0].properties.unit}`
+          ).join('\n')
+        );
+
       } else {
-        setHighlightedHexes(new Set());
-      }
+        // Normal query flow
+        setIsLoading(false);
 
-      // Display detailed results if available
-      if (result.results && result.results.length > 0 && result.hex_ids.length === 0) {
-        displayDetailedResults(result.results);
+        // Add bot message
+        addBotMessage(result.summary, result.sql, `Found ${result.count.toLocaleString()} result(s)`);
+
+        // Highlight hexes on map
+        if (result.hex_ids && result.hex_ids.length > 0) {
+          setHighlightedHexes(new Set(result.hex_ids));
+        } else {
+          setHighlightedHexes(new Set());
+        }
+
+        // Display detailed results if available
+        if (result.results && result.results.length > 0 && result.hex_ids.length === 0) {
+          displayDetailedResults(result.results);
+        }
       }
     } catch (error) {
       setIsLoading(false);
@@ -167,46 +215,116 @@ export default function HexQuery() {
     }
   };
 
-  // Colors matching the original config
+  // Helper function to interpolate between colors based on yield_target
+  const interpolateColor = (value: number, stops: number[], colors: string[]): number[] => {
+    // Clamp value to range
+    const clampedValue = Math.max(stops[0], Math.min(stops[stops.length - 1], value));
+
+    // Find which color segment we're in
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (clampedValue >= stops[i] && clampedValue <= stops[i + 1]) {
+        const range = stops[i + 1] - stops[i];
+        const t = (clampedValue - stops[i]) / range; // 0 to 1
+
+        // Parse hex colors
+        const color1 = colors[i].replace('#', '');
+        const color2 = colors[i + 1].replace('#', '');
+
+        const r1 = parseInt(color1.substring(0, 2), 16);
+        const g1 = parseInt(color1.substring(2, 4), 16);
+        const b1 = parseInt(color1.substring(4, 6), 16);
+
+        const r2 = parseInt(color2.substring(0, 2), 16);
+        const g2 = parseInt(color2.substring(2, 4), 16);
+        const b2 = parseInt(color2.substring(4, 6), 16);
+
+        // Linear interpolation
+        const r = Math.round(r1 + (r2 - r1) * t);
+        const g = Math.round(g1 + (g2 - g1) * t);
+        const b = Math.round(b1 + (b2 - b1) * t);
+
+        return [r, g, b, 180];
+      }
+    }
+
+    // Default to first color if something goes wrong
+    const color = colors[0].replace('#', '');
+    return [
+      parseInt(color.substring(0, 2), 16),
+      parseInt(color.substring(2, 4), 16),
+      parseInt(color.substring(4, 6), 16),
+      180
+    ];
+  };
+
+  // Color stops for yield target visualization
+  const YIELD_STOPS = [0, 125, 250];
+  const YIELD_COLORS = ['#a50426', '#fefdbd', '#016937'];
+
   const COLORS = {
-    DEFAULT: [100, 150, 255, 180],      // Blue
     HIGHLIGHTED: [255, 100, 100, 220],   // Red
     HOVER: [255, 200, 100, 220]          // Orange
   };
+
+  const MAX_LINE_WIDTH_ZOOM_LEVEL = 12;
 
   const [layersState, setLayersState] = useState<any[]>([]);
 
   // Create layers with deck.gl
   useEffect(() => {
-    if (!geoJsonData || typeof window === 'undefined') {
+    if (!mounted || !geoJsonData || typeof window === 'undefined') {
       setLayersState([]);
       return;
     }
-    
+
     console.log('Creating layers with', geoJsonData.features.length, 'features');
-    
+
     // Dynamically import GeoJsonLayer when needed
     import('@deck.gl/layers').then(({ GeoJsonLayer }) => {
+      const layers: any[] = [];
+
       // Get fill color for hex based on state
       const getFillColor = (feature: any) => {
         const h3Index = feature.properties.h3_index;
-        
+
         // Hover state (highest priority)
         if (hoveredHex === h3Index) {
           return COLORS.HOVER;
         }
-        
+
         // Highlighted state
         if (highlightedHexes.has(h3Index)) {
           return COLORS.HIGHLIGHTED;
         }
-        
-        // Default state
-        return COLORS.DEFAULT;
+
+        // If prescription layer is selected, color by application rate
+        if (selectedPrescriptionLayer && prescriptionMaps.length > 0) {
+          let value = 0;
+          let stops = [0, 100, 200];
+          let colors = ['#a50426', '#fefdbd', '#016937']; // Default: Red -> Yellow -> Green
+
+          if (selectedPrescriptionLayer === 'nitrogen pass') {
+            value = feature.properties.N_to_apply || 0;
+            stops = [0, 250]; // Nitrogen range
+            colors = ['#f5fbf4', '#054419']; // Light green -> Dark green
+          } else if (selectedPrescriptionLayer === 'phosphorus pass') {
+            value = feature.properties.P_to_apply || 0;
+            stops = [0, 250]; // Phosphorus range
+            colors = ['#fbfbfd', '#3b0379']; // Light white/blue -> Dark purple
+          } else if (selectedPrescriptionLayer === 'potassium pass') {
+            value = feature.properties.K_to_apply || 0;
+            stops = [0, 250]; // Potassium range
+            colors = ['#f6faff', '#08316e']; // Light blue -> Dark navy
+          }
+
+          return interpolateColor(value, stops, colors);
+        }
+
+        // Default state - color based on yield_target
+        const yieldTarget = feature.properties.yield_target || 0;
+        return interpolateColor(yieldTarget, YIELD_STOPS, YIELD_COLORS);
       };
 
-      // No import statements allowed here (import type issue)
-      // Just use GeoJsonLayer as provided by dynamic import, no type cast
       const layer: any = new (GeoJsonLayer as any)({
         id: 'hex-layer',
         data: geoJsonData,
@@ -218,25 +336,23 @@ export default function HexQuery() {
         getElevation: 0,
         elevationScale: 0,
         getFillColor: getFillColor,
-        getLineColor: [80, 80, 80],
-        getLineWidth: 1,
-        lineWidthMinPixels: 1,
+        getLineColor: [40, 40, 40, 100],
+        getLineWidth: 0.1,
+        lineWidthMinPixels: 1.0,
         updateTriggers: {
-          getFillColor: [Array.from(highlightedHexes), hoveredHex]
+          getFillColor: [Array.from(highlightedHexes), hoveredHex, selectedPrescriptionLayer]
         },
         visible: true,
         opacity: 1
       });
+      layers.push(layer);
 
-      console.log('Layer created:', layer);
-      console.log('Layer data count:', geoJsonData.features.length);
-      console.log('Layers state will be set to:', [layer]);
-      setLayersState([layer]);
+      setLayersState(layers);
     }).catch((error) => {
       console.error('Failed to load deck.gl layers:', error);
       setLayersState([]);
     });
-  }, [geoJsonData, highlightedHexes, hoveredHex]);
+  }, [mounted, geoJsonData, highlightedHexes, hoveredHex, prescriptionMaps, selectedPrescriptionLayer]);
 
   // Handle hover events
   const handleHover = (info: any) => {
@@ -352,6 +468,51 @@ export default function HexQuery() {
                 <div>GeoJSON: {geoJsonData ? `${geoJsonData.features?.length || 0} features` : 'loading...'}</div>
                 <div>Highlighted: {highlightedHexes.size}</div>
                 <div>Hovered: {hoveredHex || 'none'}</div>
+              </div>
+            )}
+
+            {/* Prescription Map Layer Controls */}
+            {prescriptionMaps.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '20px',
+                right: '420px',
+                zIndex: 1000,
+                background: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  Prescription Maps
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="prescription-layer"
+                      checked={selectedPrescriptionLayer === null}
+                      onChange={() => setSelectedPrescriptionLayer(null)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    <span style={{ fontSize: '13px' }}>None (Show Data)</span>
+                  </label>
+                  {prescriptionMaps.map((pm) => (
+                    <label key={pm.pass} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="prescription-layer"
+                        checked={selectedPrescriptionLayer === pm.pass}
+                        onChange={() => setSelectedPrescriptionLayer(pm.pass)}
+                        style={{ marginRight: '8px' }}
+                      />
+                      <span style={{ fontSize: '13px' }}>
+                        {pm.pass} ({pm.geojson.features[0].properties.rate} {pm.geojson.features[0].properties.unit})
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
             <DeckGL

@@ -155,6 +155,68 @@ Return only valid SQL. Do not include markdown code blocks or explanations."""
         except Exception as e:
             raise Exception(f"Failed to generate SQL: {str(e)}")
 
+    def _detect_intent(self, question: str) -> Dict[str, Any]:
+        """
+        Detect user intent - whether they want a query or a prescription map
+
+        Args:
+            question: User's natural language question
+
+        Returns:
+            Dictionary with intent and extracted parameters
+        """
+        intent_prompt = """You are analyzing user requests to determine their intent.
+
+Classify the user's request into one of these categories:
+
+1. "prescription_map" - User wants to create a prescription map, variable rate application map, or rx map
+   Examples: "create a prescription map", "generate rx map", "make me a prescription", "variable rate application"
+
+2. "query" - User wants to query/search/analyze data
+   Examples: "show me hexes with low P", "what's the average yield", "find areas that need fertilizer"
+
+Respond in this exact format:
+INTENT: <prescription_map or query>
+FIELD: <field name if mentioned, otherwise "all">
+
+User request: """
+
+        try:
+            response = self.client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=256,
+                messages=[{
+                    "role": "user",
+                    "content": intent_prompt + question
+                }]
+            )
+
+            response_text = response.content[0].text.strip()
+
+            # Parse response
+            intent = "query"  # default
+            field_name = None
+
+            for line in response_text.split('\n'):
+                if line.startswith('INTENT:'):
+                    intent = line.split(':', 1)[1].strip()
+                elif line.startswith('FIELD:'):
+                    field_value = line.split(':', 1)[1].strip()
+                    if field_value.lower() not in ['all', 'none', '']:
+                        field_name = field_value
+
+            return {
+                "intent": intent,
+                "field_name": field_name
+            }
+
+        except Exception as e:
+            # Default to query on error
+            return {
+                "intent": "query",
+                "field_name": None
+            }
+
     def execute_natural_language_query(self, question: str) -> Dict[str, Any]:
         """
         Execute a natural language query end-to-end
@@ -165,6 +227,23 @@ Return only valid SQL. Do not include markdown code blocks or explanations."""
         Returns:
             Dictionary with query results and metadata
         """
+        # First, detect the intent
+        intent_info = self._detect_intent(question)
+
+        # If user wants a prescription map, return that intent
+        if intent_info["intent"] == "prescription_map":
+            return {
+                "question": question,
+                "intent": "prescription_map",
+                "field_name": intent_info["field_name"] or "North of Road",
+                "sql": None,
+                "results": [],
+                "hex_ids": [],
+                "count": 0,
+                "summary": "I'll create a prescription map for you. This will generate variable rate application maps for nitrogen, phosphorus, and potassium."
+            }
+
+        # Otherwise, continue with normal SQL query flow
         # Generate SQL from natural language
         sql = self.natural_language_to_sql(question)
 
@@ -184,6 +263,7 @@ Return only valid SQL. Do not include markdown code blocks or explanations."""
 
         return {
             "question": question,
+            "intent": "query",
             "sql": sql,
             "results": results,
             "hex_ids": hex_ids,
