@@ -31,6 +31,55 @@ interface Message {
 const API_BASE_URL = '/api/hex-query';
 const GEOJSON_PATH = '/north-of-road-high-res.geojson';
 
+const FIELD_GEOJSON_SOURCES: Array<{ field: string; path: string }> = [
+  { field: FIELD_NAMES.NORTH_OF_ROAD, path: '/north-of-road-high-res.geojson' },
+  { field: FIELD_NAMES.SOUTH_OF_ROAD, path: '/south-of-road-high-res.geojson' },
+  { field: FIELD_NAMES.RAILROAD_PIVOT, path: '/railroad-pivot-high-res.geojson' }
+];
+
+const FIELD_CENTERS_BY_NAME: Record<string, [number, number]> = {
+  [FIELD_NAMES.NORTH_OF_ROAD]: FIELD_CENTERS.NORTH_OF_ROAD,
+  [FIELD_NAMES.SOUTH_OF_ROAD]: FIELD_CENTERS.SOUTH_OF_ROAD,
+  [FIELD_NAMES.RAILROAD_PIVOT]: FIELD_CENTERS.RAILROAD_PIVOT
+};
+
+const FIELD_KEYWORDS: Array<{ field: string; keywords: string[] }> = [
+  { field: FIELD_NAMES.NORTH_OF_ROAD, keywords: ['north of road', 'north field', 'north-of-road'] },
+  { field: FIELD_NAMES.SOUTH_OF_ROAD, keywords: ['south of road', 'south field', 'south-of-road'] },
+  { field: FIELD_NAMES.RAILROAD_PIVOT, keywords: ['railroad pivot', 'railroad field', 'pivot'] }
+];
+
+function detectFieldFromQuestion(question: string): string | null {
+  const normalized = (question || '').toLowerCase();
+  if (!normalized) return null;
+  for (const { field, keywords } of FIELD_KEYWORDS) {
+    if (keywords.some(keyword => normalized.includes(keyword))) {
+      return field;
+    }
+  }
+  return null;
+}
+
+function detectFieldsInQuestion(question: string): string[] {
+  const normalized = (question || '').toLowerCase();
+  if (!normalized) return [];
+  const matches = FIELD_KEYWORDS.filter(({ keywords }) =>
+    keywords.some(keyword => normalized.includes(keyword))
+  ).map(({ field }) => field);
+
+  if (matches.length > 1) {
+    return Array.from(new Set(matches));
+  }
+
+  if (matches.length === 0) {
+    if (normalized.includes('all fields') || normalized.includes('multiple fields') || normalized.includes('fields')) {
+      return Object.values(FIELD_NAMES);
+    }
+  }
+
+  return Array.from(new Set(matches));
+}
+
 export default function HexQuery() {
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -54,7 +103,16 @@ export default function HexQuery() {
     bearing: 0
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([
+    {
+      type: 'bot',
+      text: '👋 Hi! I can help you query your agricultural hex data. Try asking:\n• "Show me hexes with low phosphorus"\n• "What\'s the average yield target?"\n• "Find hexes that need more than 100 units of nitrogen"\n• "Show hexes with high yield and low potassium"'
+    }
+  ]);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const hexToFieldRef = useRef<Record<string, string>>({});
+  const pendingFieldsRef = useRef<string[]>([]);
+  const [requestedField, setRequestedField] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
   const initialQuestion = (searchParams?.get('question') || '').trim();
@@ -93,9 +151,32 @@ export default function HexQuery() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   const submitQuestion = async (rawQuestion: string) => {
     const question = rawQuestion.trim();
     if (!question || isLoading) return;
+
+    const requiresMap = questionRequiresVisualization(question);
+    const fieldsMentioned = detectFieldsInQuestion(question);
+    pendingFieldsRef.current = fieldsMentioned;
+    const targetedField = fieldsMentioned.length === 1 ? fieldsMentioned[0] : detectFieldFromQuestion(question);
+
+    if (requiresMap && !showMap) {
+      setShouldAnimateToMap(true);
+      setShowMap(true);
+    } else if (!requiresMap && showMap) {
+      setShowMap(false);
+      setShouldAnimateToMap(false);
+    }
+
+    if (requiresMap && targetedField) {
+      setRequestedField(targetedField);
+    } else if (!requiresMap) {
+      setRequestedField(null);
+    }
 
     setInputValue('');
     addUserMessage(question);
@@ -174,9 +255,36 @@ export default function HexQuery() {
           displayDetailedResults(result.results);
         }
       }
+
+      if (!requiresMap && pendingFieldsRef.current.length > 1) {
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem(
+              'assistantMultiField',
+              JSON.stringify({
+                question,
+                results: result.results || [],
+                summary: result.summary,
+                sql: result.sql,
+                count: result.count,
+                timestamp: Date.now()
+              })
+            );
+            sessionStorage.setItem('assistantChatHistory', JSON.stringify(messagesRef.current));
+          } catch (storageError) {
+            console.error('Failed to persist multi-field assistant data:', storageError);
+          }
+          window.location.href = '/multi-field';
+        }
+        pendingFieldsRef.current = [];
+        return;
+      }
+
+      pendingFieldsRef.current = [];
     } catch (error) {
       setIsLoading(false);
       addErrorMessage(error instanceof Error ? error.message : 'Query failed. Please try again.');
+      pendingFieldsRef.current = [];
     }
   };
 
@@ -196,16 +304,24 @@ export default function HexQuery() {
   }, [mounted, initialQuestion]);
 
 
+  const appendMessage = (message: Message) => {
+    setMessages(prev => {
+      const next = [...prev, message];
+      messagesRef.current = next;
+      return next;
+    });
+  };
+
   const addUserMessage = (text: string) => {
-    setMessages(prev => [...prev, { type: 'user', text }]);
+    appendMessage({ type: 'user', text });
   };
 
   const addBotMessage = (text: string, sql?: string, metadata?: string) => {
-    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata }]);
+    appendMessage({ type: 'bot', text, sql, metadata });
   };
 
   const addErrorMessage = (error: string) => {
-    setMessages(prev => [...prev, { type: 'error', text: error }]);
+    appendMessage({ type: 'error', text: error });
   };
 
   const displayDetailedResults = (results: any[]) => {
@@ -229,7 +345,11 @@ export default function HexQuery() {
   const handleClearHistory = async () => {
     try {
       await fetch('/api/hex-query/clear-history', { method: 'POST' });
-      setMessages([messages[0]]); // Keep welcome message
+      setMessages(prev => {
+        const base = prev.length > 0 ? [prev[0]] : [];
+        messagesRef.current = base;
+        return base;
+      }); // Keep welcome message
       setHighlightedHexes(new Set());
     } catch (error) {
       console.error('Failed to clear history:', error);

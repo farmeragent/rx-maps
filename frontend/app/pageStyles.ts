@@ -33,8 +33,8 @@ const styles: Record<string, React.CSSProperties> = {
   tableTr: {
     transition: 'background-color 0.2s ease'
   },
-  fieldName: { fontWeight: 600, color: '#2c3e50', fontSize: '16px' },
-  cropType: { color: '#27ae60', fontWeight: 500, fontSize: '16px' },
+  fieldName: { fontWeight: 600, color: '#2c3e50', fontSize: 16 },
+  cropType: { color: '#27ae60', fontWeight: 500, fontSize: 16 },
   primaryBtn: { 
     background: 'linear-gradient(135deg,#2d5016,#4a7c59)', 
     color: '#fff', 
