@@ -61,6 +61,7 @@ class QueryResponse(BaseModel):
     hex_ids: List[str]
     count: int
     summary: str
+    view_type: Optional[str] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -145,7 +146,8 @@ async def query_database(request: QueryRequest):
             results=result['results'],
             hex_ids=result['hex_ids'],
             count=result['count'],
-            summary=result['summary']
+            summary=result['summary'],
+            view_type=result.get('view_type')
         )
 
     except Exception as e:

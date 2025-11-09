@@ -82,6 +82,11 @@ class DatabaseConnection:
 
         stats = conn.execute(stats_sql).fetchone()
 
+        # Get distinct field names
+        field_names_sql = "SELECT DISTINCT field_name FROM agricultural_hexes ORDER BY field_name;"
+        field_names_result = conn.execute(field_names_sql).fetchall()
+        field_names = [row[0] for row in field_names_result]
+
         # Build result with database stats
         result = {
             "table_name": "agricultural_hexes",
@@ -92,7 +97,8 @@ class DatabaseConnection:
                 "avg_P": stats[3],
                 "avg_K": stats[4],
                 "avg_N": stats[5]
-            }
+            },
+            "field_names": field_names
         }
 
         # If schema config exists, use rich metadata; otherwise fallback to basic info

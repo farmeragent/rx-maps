@@ -49,6 +49,10 @@ class QueryService:
         domain_knowledge = schema_info.get('domain_knowledge', [])
         domain_text = "\n".join([f"- {fact}" for fact in domain_knowledge])
 
+        # Get field names
+        field_names = schema_info.get('field_names', [])
+        field_names_text = ", ".join([f"'{name}'" for name in field_names]) if field_names else "No fields defined"
+
         # Build the prompt
         prompt = f"""You are a SQL query generator for an agricultural database. Your job is to convert user questions into valid DuckDB SQL queries.
 
@@ -65,6 +69,9 @@ Database Statistics:
 - Average P in soil: {stats['avg_P']} ppm
 - Average K in soil: {stats['avg_K']} ppm
 - Average N in soil: {stats['avg_N']} ppm
+
+Valid Field Names (use EXACTLY as shown):
+{field_names_text}
 """
 
         if hints_text:
@@ -76,6 +83,7 @@ Database Statistics:
         prompt += """
 Important Rules:
 - ALWAYS include h3_index in SELECT when showing/finding specific hexes (needed for map highlighting)
+- Use EXACT field names from the Valid Field Names list above - do not modify or guess field names
 - Return ONLY the SQL query, no explanations or markdown code blocks
 - Use proper DuckDB SQL syntax
 - Use ROUND() for decimal values in aggregations
@@ -261,6 +269,9 @@ User request: """
         # Generate summary
         summary = self._generate_summary(question, results, sql)
 
+        # Determine which view to use
+        view_type = self._determine_view_type(results)
+
         return {
             "question": question,
             "intent": "query",
@@ -268,7 +279,8 @@ User request: """
             "results": results,
             "hex_ids": hex_ids,
             "count": len(results),
-            "summary": summary
+            "summary": summary,
+            "view_type": view_type
         }
 
     def _calculate_acreage(self, hex_count: int) -> float:
@@ -349,6 +361,32 @@ Your summary:"""
             # Fallback to simple summary if API call fails
             print(f"Failed to generate natural language summary: {str(e)}")
             return f"Found {hex_count:,} hexes matching your query."
+
+    def _determine_view_type(self, results: List[Dict]) -> Optional[str]:
+        """
+        Determine the best view based on result structure
+
+        Rules:
+        1. If results contain h3_index → spatial data → map
+        2. If multiple rows → comparison/list → table
+        3. Otherwise → None (display in chat only)
+
+        Returns:
+            'map', 'table', or None
+        """
+        if not results:
+            return None
+
+        # Check for spatial data
+        if 'h3_index' in results[0]:
+            return 'map'
+
+        # Check for multiple rows (comparison/list/aggregation)
+        if len(results) > 1:
+            return 'table'
+
+        # Single value → no special view needed
+        return None
 
     def _generate_summary(self, question: str, results: List[Dict], sql: str) -> str:
         """Generate a human-readable summary of query results"""
