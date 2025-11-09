@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChatSidebar from './ChatSidebar';
 import HexMapView from './HexMapView';
-import TableView from './TableView';
 
 interface QueryResult {
   question: string;
@@ -23,6 +22,7 @@ interface Message {
   text: string;
   sql?: string;
   metadata?: string;
+  tableData?: any[];
 }
 
 const API_BASE_URL = '/api/hex-query';
@@ -82,8 +82,8 @@ export default function HexQuery() {
     setMessages(prev => [...prev, { type: 'user', text }]);
   };
 
-  const addBotMessage = (text: string, sql?: string, metadata?: string) => {
-    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata }]);
+  const addBotMessage = (text: string, sql?: string, metadata?: string, tableData?: any[]) => {
+    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata, tableData }]);
   };
 
   const addErrorMessage = (error: string) => {
@@ -152,20 +152,21 @@ export default function HexQuery() {
         setIsLoading(false);
         setQueryResult(result);
 
-        // Only change view if backend specifies a view type
-        // Otherwise keep current view (prevents jarring switches to empty state)
-        if (result.view_type) {
-          setCurrentView(result.view_type);
-        }
-
-        // Add bot message
-        addBotMessage(result.summary, result.sql);
-
-        // Highlight hexes on map if view is map
-        if (result.view_type === 'map' && result.hex_ids && result.hex_ids.length > 0) {
-          setHighlightedHexes(new Set(result.hex_ids));
+        // Handle different view types
+        if (result.view_type === 'map') {
+          setCurrentView('map');
+          // Highlight hexes on map
+          if (result.hex_ids && result.hex_ids.length > 0) {
+            setHighlightedHexes(new Set(result.hex_ids));
+          }
+          // Add bot message without table data
+          addBotMessage(result.summary, result.sql);
+        } else if (result.view_type === 'table') {
+          // Table view: embed in chat, don't change main view
+          addBotMessage(result.summary, result.sql, undefined, result.results);
         } else {
-          setHighlightedHexes(new Set());
+          // Simple answer: keep current view, show in chat only
+          addBotMessage(result.summary, result.sql);
         }
       }
     } catch (error) {
@@ -208,18 +209,11 @@ export default function HexQuery() {
           />
         )}
 
-        {currentView === 'table' && queryResult && (
-          <TableView
-            data={queryResult.results}
-            summary={queryResult.summary}
-          />
-        )}
-
         {!currentView && (
           <div className="hex-query-empty">
             <div className="hex-query-empty__content">
               <h2>Ask me anything about your fields</h2>
-              <p>I'll show you maps, tables, or direct answers based on your question.</p>
+              <p>I'll show you maps or direct answers based on your question.</p>
             </div>
           </div>
         )}
