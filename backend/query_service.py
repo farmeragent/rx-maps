@@ -295,7 +295,7 @@ User request: """
 
     def _generate_natural_language_summary(self, question: str, sql: str, results: List[Dict], hex_count: int) -> str:
         """
-        Generate a personable, natural language summary using Claude
+        Generate a simple summary for hex query results
 
         Args:
             question: User's original question
@@ -309,58 +309,11 @@ User request: """
         # Calculate acreage if we have hexes
         acreage = self._calculate_acreage(hex_count) if hex_count > 0 else 0
 
-        # Build context for Claude
-        context = f"""User asked: "{question}"
-
-SQL query executed: {sql}
-
-Results: {hex_count} hexes found"""
-
+        # Simple summary without Claude API call
         if acreage > 0:
-            context += f"\nAcreage: {acreage:.2f} acres"
-
-        # Add sample results if available
-        if results and len(results) > 0:
-            sample_result = results[0]
-            context += f"\nSample result: {sample_result}"
-
-        prompt = f"""{context}
-
-Generate a friendly, conversational summary of these query results.
-
-Requirements:
-- Start with "I found" (first person, personable tone)
-- Include the acreage when relevant
-- Explain what conditions were checked in plain English
-- Be specific about threshold values that were used
-- Keep it concise (1-2 sentences max)
-- Use natural, conversational language
-
-Example style: "I found 2.34 acres where we should apply lime (pH was below 6.0 and calcium was below 1800 lbs per acre)."
-
-Your summary:"""
-
-        try:
-            response = self.client.messages.create(
-                model="claude-haiku-4-5",
-                max_tokens=256,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
-
-            summary = response.content[0].text.strip()
-            # Remove quotes if Claude wrapped the response
-            if summary.startswith('"') and summary.endswith('"'):
-                summary = summary[1:-1]
-
-            return summary
-
-        except Exception as e:
-            # Fallback to simple summary if API call fails
-            print(f"Failed to generate natural language summary: {str(e)}")
-            return f"Found {hex_count:,} hexes matching your query."
+            return f"I found {hex_count:,} hexes covering {acreage:,.2f} acres matching your query."
+        else:
+            return f"I found {hex_count:,} hexes matching your query."
 
     def _determine_view_type(self, results: List[Dict]) -> Optional[str]:
         """
