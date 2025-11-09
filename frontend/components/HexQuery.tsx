@@ -43,6 +43,7 @@ export default function HexQuery() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'map' | 'table' | null>(null);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [hasShownMap, setHasShownMap] = useState(false);
 
   // Map-specific state
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -137,6 +138,7 @@ export default function HexQuery() {
           setSelectedPrescriptionLayer(prescriptionData.prescription_maps[0].pass);
           setHighlightedHexes(new Set());
           setCurrentView('map'); // Show map for prescription
+          setHasShownMap(true); // Mark that we've shown the map at least once
         }
 
         // Add success message
@@ -155,6 +157,7 @@ export default function HexQuery() {
         // Handle different view types
         if (result.view_type === 'map') {
           setCurrentView('map');
+          setHasShownMap(true); // Mark that we've shown the map at least once
           // Highlight hexes on map
           if (result.hex_ids && result.hex_ids.length > 0) {
             setHighlightedHexes(new Set(result.hex_ids));
@@ -199,14 +202,28 @@ export default function HexQuery() {
       />
 
       <div className="hex-query-content">
-        {currentView === 'map' && geoJsonData && (
-          <HexMapView
-            geoJsonData={geoJsonData}
-            highlightedHexes={highlightedHexes}
-            prescriptionMaps={prescriptionMaps}
-            selectedPrescriptionLayer={selectedPrescriptionLayer}
-            onPrescriptionLayerChange={setSelectedPrescriptionLayer}
-          />
+        {/* Only mount map when first needed, then keep mounted to avoid WebGL context recreation */}
+        {geoJsonData && hasShownMap && (
+          <div
+            className="hex-query-map-container"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              visibility: currentView === 'map' ? 'visible' : 'hidden',
+              pointerEvents: currentView === 'map' ? 'auto' : 'none'
+            }}
+          >
+            <HexMapView
+              geoJsonData={geoJsonData}
+              highlightedHexes={highlightedHexes}
+              prescriptionMaps={prescriptionMaps}
+              selectedPrescriptionLayer={selectedPrescriptionLayer}
+              onPrescriptionLayerChange={setSelectedPrescriptionLayer}
+            />
+          </div>
         )}
 
         {!currentView && (
@@ -230,6 +247,7 @@ export default function HexQuery() {
           flex: 1;
           position: relative;
           background: #f9fafb;
+          overflow: hidden;
         }
 
         .hex-query-empty {
