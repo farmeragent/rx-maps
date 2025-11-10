@@ -4,7 +4,6 @@ import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../pageStyles';
 import { FIELD_NAMES } from '../../constants';
-import FertilityTimeline from '../../components/FertilityTimeline';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
@@ -473,7 +472,6 @@ export default function DashboardPage() {
               ← Back to Fields
             </button>
           </div>
-          <FertilityTimeline />
         </div>
       )}
 
