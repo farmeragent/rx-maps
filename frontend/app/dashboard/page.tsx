@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import styles from '../pageStyles';
 import { FIELD_NAMES } from '../../constants';
@@ -9,8 +8,6 @@ import FertilityTimeline from '../../components/FertilityTimeline';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
-const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
-
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning' | 'yield-view' | 'nutrient-capacity-view';
 
 type Phase = 'pre-plant' | 'post-plant';
@@ -480,22 +477,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {page !== 'fields' && page !== 'fertility-planning' && (
-        <MapView
-          page={page}
-          currentField={currentField}
-          selectedAttr={selectedAttr}
-          nutrientCurrent={nutrientCurrent}
-          nutrientNeeded={nutrientNeeded}
-          onSetNutrientCurrent={setNutrientCurrent}
-          onSetNutrientNeeded={setNutrientNeeded}
-          onNext={() => setPage(page === 'yield' ? 'nutrient-capacity' : 'nutrient-needed')}
-          onBack={goBack}
-          onHome={goHome}
-          hideNavigation={false}
-          hideNextBack={page === 'yield-view' || page === 'nutrient-capacity-view'}
-        />
-      )}
+      {/* MapView removed */}
 
       {selectedPass && (
         <div 
