@@ -179,7 +179,7 @@ export default function HexMapView({
         return getBaseColor(feature);
       };
 
-      const getLineWidth = (feature: any) => {
+      const getLineWidth = () => {
         return viewState.zoom < 15 ? 0 : 0.5;
       };
 

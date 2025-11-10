@@ -9,8 +9,6 @@ import FertilityTimeline from '../../components/FertilityTimeline';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
-import HexMapView from '../../components/HexMapView';
-
 const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning' | 'yield-view' | 'nutrient-capacity-view';
@@ -129,13 +127,6 @@ export default function DashboardPage() {
     });
     return passCostsMap;
   });
-
-  const [northCostSummary, setNorthCostSummary] = useState<{ totalCost: number; costPerAcre: number } | null>(null);
-  const [northFertilizerBreakdown, setNorthFertilizerBreakdown] = useState<{
-    dap: { totalCost: number; costPerAcre: number };
-    kno3: { totalCost: number; costPerAcre: number };
-    urea: { totalCost: number; costPerAcre: number };
-  } | null>(null);
 
   const [dynamicColumns, setDynamicColumns] = useState<string[]>([]);
   const [dynamicFieldValues, setDynamicFieldValues] = useState<Record<string, Record<string, any>>>({});

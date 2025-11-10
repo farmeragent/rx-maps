@@ -113,65 +113,67 @@ export default function ChatSidebar({
               {message.metadata && (
                 <div className="chat-sidebar__meta">{message.metadata}</div>
               )}
-              {message.tableData && message.tableData.length > 0 && (
-                <details className="chat-sidebar__table-details" open>
-                  <summary className="chat-sidebar__table-summary">
-                    <span className="chat-sidebar__table-arrow">▶</span>
-                    Table Results ({message.tableData.length} rows)
-                  </summary>
-                  <div className="chat-sidebar__table-container">
-                    <table className="chat-sidebar__table">
-                      <thead>
-                        <tr>
-                          {Object.keys(message.tableData[0]).map((column) => {
-                            const metadata = message.columnMetadata?.[column];
-                            const displayName = metadata?.display_name || column.replace(/_/g, ' ');
-                            const unit = metadata?.unit;
-                            return (
-                              <th key={column}>
-                                <div className="chat-sidebar__table-header">
-                                  <div className="chat-sidebar__table-header-name">{displayName}</div>
-                                  {unit && (
-                                    <div className="chat-sidebar__table-header-unit">[{unit}]</div>
-                                  )}
-                                </div>
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {message.tableData.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {Object.keys(message.tableData[0]).map((column) => {
-                              const value = row[column];
-                              const formatted = typeof value === 'number'
-                                ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                                : String(value);
-
-                              // Make field_name column clickable
-                              if (column === 'field_name') {
-                                return (
-                                  <td key={column}>
-                                    <button
-                                      onClick={() => onAction(`view_field:${value}`, undefined)}
-                                      className="chat-sidebar__field-link"
-                                    >
-                                      {formatted}
-                                    </button>
-                                  </td>
-                                );
-                              }
-
-                              return <td key={column}>{formatted}</td>;
+              {Array.isArray(message.tableData) && message.tableData.length > 0 && (() => {
+                const tableData = message.tableData;
+                return (
+                  <details className="chat-sidebar__table-details" open>
+                    <summary className="chat-sidebar__table-summary">
+                      <span className="chat-sidebar__table-arrow">▶</span>
+                      Table Results ({tableData.length} rows)
+                    </summary>
+                    <div className="chat-sidebar__table-container">
+                      <table className="chat-sidebar__table">
+                        <thead>
+                          <tr>
+                            {Object.keys(tableData[0]).map((column) => {
+                              const metadata = message.columnMetadata?.[column];
+                              const displayName = metadata?.display_name || column.replace(/_/g, ' ');
+                              const unit = metadata?.unit;
+                              return (
+                                <th key={column}>
+                                  <div className="chat-sidebar__table-header">
+                                    <div className="chat-sidebar__table-header-name">{displayName}</div>
+                                    {unit && (
+                                      <div className="chat-sidebar__table-header-unit">[{unit}]</div>
+                                    )}
+                                  </div>
+                                </th>
+                              );
                             })}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
-              )}
+                        </thead>
+                        <tbody>
+                          {tableData.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {Object.keys(tableData[0]).map((column) => {
+                                const value = row[column];
+                                const formatted = typeof value === 'number'
+                                  ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                                  : String(value);
+
+                                if (column === 'field_name') {
+                                  return (
+                                    <td key={column}>
+                                      <button
+                                        onClick={() => onAction(`view_field:${value}`, undefined)}
+                                        className="chat-sidebar__field-link"
+                                      >
+                                        {formatted}
+                                      </button>
+                                    </td>
+                                  );
+                                }
+
+                                return <td key={column}>{formatted}</td>;
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                );
+              })()}
               {message.actions && message.actions.length > 0 && (
                 <div className="chat-sidebar__inline-actions">
                   {message.actions.map((action) => {

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.QUERY_SERVICE_API_URL || 'http://localhost:8000';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const response = await fetch(`${BACKEND_URL}/api/query/clear-history`, {
       method: 'POST'

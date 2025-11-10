@@ -42,8 +42,6 @@ function calculateAcres(polygon: GeoJSONPolygon): number {
   const coordinates = polygon.coordinates[0]; // Outer ring
   if (coordinates.length < 3) return 0;
   
-  // Earth's radius in meters
-  const R = 6378137; // meters
   const METERS_TO_ACRES = 0.000247105; // 1 square meter = 0.000247105 acres
   
   // Use shoelace formula with latitude correction for spherical coordinates
@@ -252,7 +250,6 @@ export default function MapView(props: {
 }) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapNode = useRef<HTMLDivElement | null>(null);
-  const [zoom, setZoom] = useState<number>(15);
   const [showDialog, setShowDialog] = useState<boolean>(false);
   const selectedAttrRef = useRef<string | null>(null);
   const [paintMode, setPaintMode] = useState<boolean>(false);
@@ -313,7 +310,6 @@ export default function MapView(props: {
       zoom: 15
     });
     mapRef.current = map;
-    setZoom(15);
 
     map.on('load', () => {
       try {
@@ -364,10 +360,6 @@ export default function MapView(props: {
       } catch (error) {
         console.error('Error loading map layers:', error);
       }
-    });
-
-    map.on('zoom', () => {
-      setZoom(map.getZoom());
     });
 
     const handlePaint = (event: mapboxgl.MapMouseEvent) => {

@@ -18,11 +18,6 @@ interface PhaseData {
 
 type TimelineData = Record<Phase, PhaseData>;
 
-const PHASE_NAMES: Record<Phase, string> = {
-  'pre-plant': 'Pre-plant',
-  'post-plant': 'Post-plant'
-};
-
 const defaultTimelineData: TimelineData = {
   'pre-plant': { passes: [] },
   'post-plant': { passes: [] }
@@ -119,7 +114,6 @@ async function deletePass(phase: Phase, passId: string): Promise<TimelineData> {
 
 export default function FertilityTimeline() {
   const [timelineData, setTimelineData] = useState<TimelineData>(defaultTimelineData);
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -129,7 +123,6 @@ export default function FertilityTimeline() {
   
   const [yieldGoal, setYieldGoal] = useState<string>('');
   const [nutrientGoals, setNutrientGoals] = useState<string>('');
-  const [isSavingGoals, setIsSavingGoals] = useState(false);
   const yieldGoalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const nutrientGoalsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -159,7 +152,6 @@ export default function FertilityTimeline() {
           }
         };
         setTimelineData(renumberedData);
-        setIsLoaded(true);
       } catch (err) {
         setError('Failed to load passes. Please try again.');
         console.error(err);
@@ -204,7 +196,6 @@ export default function FertilityTimeline() {
   }, []);
   
   async function saveYieldGoal(value: string) {
-    setIsSavingGoals(true);
     try {
       const response = await fetch('/api/philosophy/yield-goal', {
         method: 'POST',
@@ -215,13 +206,10 @@ export default function FertilityTimeline() {
     } catch (err) {
       console.error('Error saving yield goal:', err);
       setError('Failed to save yield goal. Please try again.');
-    } finally {
-      setIsSavingGoals(false);
     }
   }
   
   async function saveNutrientGoals(value: string) {
-    setIsSavingGoals(true);
     try {
       const response = await fetch('/api/philosophy/nutrient-goals', {
         method: 'POST',
@@ -232,8 +220,6 @@ export default function FertilityTimeline() {
     } catch (err) {
       console.error('Error saving nutrient goals:', err);
       setError('Failed to save nutrient goals. Please try again.');
-    } finally {
-      setIsSavingGoals(false);
     }
   }
 
@@ -360,11 +346,11 @@ export default function FertilityTimeline() {
     setEditForm({});
   }
 
-  async function handleDragStart(phase: Phase, passId: string) {
+  async function handleDragStart(passId: string) {
     setDraggedPassId(passId);
   }
 
-  async function handleDragOver(phase: Phase, index: number, e: React.DragEvent) {
+  async function handleDragOver(index: number, e: React.DragEvent) {
     e.preventDefault();
     setDragOverIndex(index);
   }
@@ -434,17 +420,6 @@ export default function FertilityTimeline() {
   }
 
   async function updateEdgeConfigPhase(phase: Phase, passes: PassTile[]) {
-    // Fetch current data
-    const currentData = await fetchTimelineData();
-    
-    // Update the phase with new passes array
-    const updatedData: TimelineData = {
-      ...currentData,
-      [phase]: {
-        passes
-      }
-    };
-    
     // Save to Edge Config
     const response = await fetch('/api/passes', {
       method: 'PUT',
@@ -476,10 +451,10 @@ export default function FertilityTimeline() {
         key={pass.id} 
         draggable
         onDragStart={(e) => {
-          handleDragStart(phase, pass.id);
+          handleDragStart(pass.id);
           e.dataTransfer.effectAllowed = 'move';
         }}
-        onDragOver={(e) => handleDragOver(phase, index, e)}
+        onDragOver={(e) => handleDragOver(index, e)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => {
           e.preventDefault();

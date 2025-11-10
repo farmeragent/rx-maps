@@ -40,7 +40,7 @@ async function getEdgeConfigValue(key: string): Promise<any> {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const uploads = await getEdgeConfigValue(EDGE_CONFIG_KEY);
     

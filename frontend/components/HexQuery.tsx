@@ -44,7 +44,6 @@ export default function HexQuery() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'map' | 'table' | null>(null);
-  const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [hasShownMap, setHasShownMap] = useState(false);
   const [isFullWidth, setIsFullWidth] = useState(true); // Start with full-width chat
   const [pendingAllFieldsPrompt, setPendingAllFieldsPrompt] = useState(false);
@@ -292,7 +291,6 @@ export default function HexQuery() {
       } else {
         // Normal query flow
         setIsLoading(false);
-        setQueryResult(result);
 
         // Handle different view types
         if (result.view_type === 'map') {
@@ -333,7 +331,6 @@ export default function HexQuery() {
       resetMessages(); // Keep welcome message
       setHighlightedHexes(new Set());
       setCurrentView(null);
-      setQueryResult(null);
       setIsFullWidth(true); // Reset to full-width
       setHasShownMap(false); // Reset map state
       setVisibleFieldNames(new Set(ALL_FIELD_NAMES));
