@@ -84,6 +84,7 @@ Valid Field Names (use EXACTLY as shown):
 Important Rules:
 - ALWAYS include h3_index in SELECT when showing/finding specific hexes (needed for map highlighting)
 - Use EXACT field names from the Valid Field Names list above - do not modify or guess field names
+- When using aggregations with aliases, preserve the base column name in the alias (e.g., SUM(N_to_apply) as total_N_to_apply, AVG(P_in_soil) as avg_P_in_soil)
 - Return ONLY the SQL query, no explanations or markdown code blocks
 - Use proper DuckDB SQL syntax
 - Use ROUND() for decimal values in aggregations
@@ -91,8 +92,9 @@ Important Rules:
 
 Example Queries:
 - "Show hexes with low phosphorus" → SELECT h3_index, field_name, P_in_soil FROM agricultural_hexes WHERE P_in_soil < 60
-- "Which field has the lowest phosphorus?" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P ASC LIMIT 1
-- "Compare fields by average phosphorus" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P
+- "Which field has the lowest phosphorus?" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P_in_soil FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P_in_soil ASC LIMIT 1
+- "Compare fields by average phosphorus" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P_in_soil FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P_in_soil
+- "How much fertilizer needed per field?" → SELECT field_name, SUM(N_to_apply) as total_N_to_apply, SUM(P_to_apply) as total_P_to_apply, SUM(K_to_apply) as total_K_to_apply FROM agricultural_hexes GROUP BY field_name
 
 Return only valid SQL. Do not include markdown code blocks or explanations."""
 
@@ -272,6 +274,12 @@ User request: """
         # Determine which view to use
         view_type = self._determine_view_type(results)
 
+        # Get column metadata for display
+        column_metadata = {}
+        if results and len(results) > 0:
+            column_names = list(results[0].keys())
+            column_metadata = self._get_column_metadata(column_names)
+
         return {
             "question": question,
             "intent": "query",
@@ -280,7 +288,8 @@ User request: """
             "hex_ids": hex_ids,
             "count": len(results),
             "summary": summary,
-            "view_type": view_type
+            "view_type": view_type,
+            "column_metadata": column_metadata
         }
 
     def _calculate_acreage(self, hex_count: int) -> float:
@@ -314,6 +323,59 @@ User request: """
             return f"I found {hex_count:,} hexes covering {acreage:,.2f} acres matching your query."
         else:
             return f"I found {hex_count:,} hexes matching your query."
+
+    def _get_column_metadata(self, column_names: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Get display metadata for columns based on schema config
+
+        Args:
+            column_names: List of column names from query results
+
+        Returns:
+            Dictionary mapping column names to their metadata (display_name, unit)
+        """
+        schema_info = self.db.get_schema_info()
+        columns_config = schema_info.get('columns', [])
+
+        metadata = {}
+        for col_name in column_names:
+            # First try exact match
+            col_config = next((c for c in columns_config if c['name'] == col_name), None)
+
+            # If no exact match, try stripping common aggregation prefixes
+            prefix_used = None
+            if not col_config:
+                # Common SQL aggregation/calculation prefixes
+                prefixes = ['total_', 'avg_', 'average_', 'sum_', 'min_', 'max_', 'count_']
+                base_name = col_name
+                for prefix in prefixes:
+                    if col_name.startswith(prefix):
+                        base_name = col_name[len(prefix):]
+                        prefix_used = prefix.rstrip('_').title()  # "total_" -> "Total"
+                        break
+
+                # Try to find base column after stripping prefix
+                if base_name != col_name:
+                    col_config = next((c for c in columns_config if c['name'] == base_name), None)
+
+            if col_config:
+                base_display_name = col_config.get('display_name', col_name.replace('_', ' ').title())
+                # If we stripped a prefix, add it back to the display name
+                display_name = f"{prefix_used} {base_display_name}" if prefix_used else base_display_name
+
+                col_metadata = {
+                    'display_name': display_name
+                }
+                if 'unit' in col_config:
+                    col_metadata['unit'] = col_config['unit']
+                metadata[col_name] = col_metadata
+            else:
+                # Fallback: convert snake_case to Title Case
+                metadata[col_name] = {
+                    'display_name': col_name.replace('_', ' ').title()
+                }
+
+        return metadata
 
     def _determine_view_type(self, results: List[Dict]) -> Optional[str]:
         """

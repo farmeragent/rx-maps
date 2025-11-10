@@ -15,6 +15,7 @@ interface QueryResult {
   count: number;
   summary: string;
   view_type?: 'map' | 'table' | null;
+  column_metadata?: Record<string, { display_name: string; unit?: string }>;
 }
 
 interface Message {
@@ -23,6 +24,7 @@ interface Message {
   sql?: string;
   metadata?: string;
   tableData?: any[];
+  columnMetadata?: Record<string, { display_name: string; unit?: string }>;
 }
 
 const API_BASE_URL = '/api/hex-query';
@@ -84,8 +86,14 @@ export default function HexQuery() {
     setMessages(prev => [...prev, { type: 'user', text }]);
   };
 
-  const addBotMessage = (text: string, sql?: string, metadata?: string, tableData?: any[]) => {
-    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata, tableData }]);
+  const addBotMessage = (
+    text: string,
+    sql?: string,
+    metadata?: string,
+    tableData?: any[],
+    columnMetadata?: Record<string, { display_name: string; unit?: string }>
+  ) => {
+    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata, tableData, columnMetadata }]);
   };
 
   const addErrorMessage = (error: string) => {
@@ -169,7 +177,7 @@ export default function HexQuery() {
           addBotMessage(result.summary, result.sql);
         } else if (result.view_type === 'table') {
           // Table view: embed in chat, don't change main view
-          addBotMessage(result.summary, result.sql, undefined, result.results);
+          addBotMessage(result.summary, result.sql, undefined, result.results, result.column_metadata);
         } else {
           // Simple answer: keep current view, show in chat only
           addBotMessage(result.summary, result.sql);

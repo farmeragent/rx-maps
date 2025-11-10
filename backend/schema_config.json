@@ -4,6 +4,7 @@
   "columns": [
     {
       "name": "h3_index",
+      "display_name": "Hex ID",
       "type": "VARCHAR",
       "description": "Unique H3 hexagon identifier (geospatial index)",
       "notes": "Required in SELECT for map highlighting.",
@@ -11,6 +12,7 @@
     },
     {
       "name": "field_name",
+      "display_name": "Field Name",
       "type": "VARCHAR",
       "description": "Name identifier for the agricultural field",
       "notes": "Use for grouping and comparing across fields",
@@ -18,12 +20,14 @@
     },
     {
       "name": "area",
+      "display_name": "Area",
       "type": "DOUBLE",
       "description": "The area of ground the hex takes up.",
       "unit": "acre"
     },
     {
       "name": "yield_target",
+      "display_name": "Yield Target",
       "type": "DOUBLE",
       "description": "The farmer's intended yield goal for the hexagon",
       "unit": "bushels per acre",
@@ -32,6 +36,7 @@
     },
     {
       "name": "P_in_soil",
+      "display_name": "Phosphorus in Soil",
       "type": "DOUBLE",
       "description": "Current phosphorus level in soil",
       "unit": "lbs per acre",
@@ -45,6 +50,7 @@
     },
     {
       "name": "K_in_soil",
+      "display_name": "Potassium in Soil",
       "type": "DOUBLE",
       "description": "Current potassium level in soil",
       "unit": "lbs per acre",
@@ -58,6 +64,7 @@
     },
     {
       "name": "N_in_soil",
+      "display_name": "Nitrogen in Soil",
       "type": "DOUBLE",
       "description": "Current nitrogen level in soil",
       "unit": "lbs per acre",
@@ -71,6 +78,7 @@
     },
     {
       "name": "calcium",
+      "display_name": "Calcium",
       "type": "DOUBLE",
       "description": "Current calcium level in soil",
       "unit": "lbs per acre",
@@ -83,6 +91,7 @@
     },
     {
       "name": "magnesium",
+      "display_name": "Magnesium",
       "type": "DOUBLE",
       "description": "Current magnesium level in soil",
       "unit": "lbs per acre",
@@ -95,6 +104,7 @@
     },
     {
       "name": "cec",
+      "display_name": "CEC",
       "type": "DOUBLE",
       "description": "Current CEC (Cation Exchange Capacity) level in soil",
       "unit": "meq / 100g",
@@ -111,6 +121,7 @@
     },
     {
       "name": "pH",
+      "display_name": "pH",
       "type": "DOUBLE",
       "description": "The acidity or alkalinity of the soil",
       "thresholds": {
@@ -124,6 +135,7 @@
     },
     {
       "name": "N_to_apply",
+      "display_name": "Nitrogen to Apply",
       "type": "DOUBLE",
       "description": "Recommended nitrogen fertilizer application amount",
       "unit": "lbs per acre",
@@ -132,22 +144,25 @@
     },
     {
       "name": "P_to_apply",
+      "display_name": "Phosphorus to Apply",
       "type": "DOUBLE",
       "description": "Recommended phosphorus fertilizer application amount",
-      "unit": "lbs P2O5 per acre",
+      "unit": "lbs per acre",
       "range": "0-140",
       "notes": "Calculated based on soil test levels. Areas with low P_in_soil will have higher P_to_apply values."
     },
     {
       "name": "K_to_apply",
+      "display_name": "Potassium to Apply",
       "type": "DOUBLE",
       "description": "Recommended potassium fertilizer application amount",
-      "unit": "lbs K2O per acre",
+      "unit": "lbs per acre",
       "range": "0-200",
       "notes": "Based on soil K levels and crop removal rates. Zero application when K_in_soil is adequate."
     },
     {
       "name": "geometry",
+      "display_name": "Geometry",
       "type": "GEOMETRY",
       "description": "Spatial polygon representing the hexagon boundary",
       "notes": "Use for spatial queries, distance calculations, and area computations with DuckDB spatial functions."
@@ -166,6 +181,7 @@
     "Potassium fertilizer prices average $0.202 per lb K2O",
     "Nitrogen fertilizer prices average $0.45-0.65 per lb N",
     "Variable rate application saves money by only applying where needed",
-    "You should apply lime to a part of the field where calcium levels are low, and pH is low."
+    "You should apply lime to a part of the field where calcium levels are low, and pH is low.",
+    "When asked for the required amount of fertilizer for a field, you look at the P_to_apply, K_to_apply, N_to_apply, columns."
   ]
 }
