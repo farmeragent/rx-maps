@@ -148,6 +148,21 @@ export default function ChatSidebar({
                               const formatted = typeof value === 'number'
                                 ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
                                 : String(value);
+
+                              // Make field_name column clickable
+                              if (column === 'field_name') {
+                                return (
+                                  <td key={column}>
+                                    <button
+                                      onClick={() => onAction(`view_field:${value}`, undefined)}
+                                      className="chat-sidebar__field-link"
+                                    >
+                                      {formatted}
+                                    </button>
+                                  </td>
+                                );
+                              }
+
                               return <td key={column}>{formatted}</td>;
                             })}
                           </tr>
@@ -517,6 +532,21 @@ export default function ChatSidebar({
 
         .chat-sidebar__table tbody tr:last-child td {
           border-bottom: none;
+        }
+
+        .chat-sidebar__field-link {
+          background: none;
+          border: none;
+          color: #2563eb;
+          text-decoration: underline;
+          cursor: pointer;
+          padding: 0;
+          font: inherit;
+          text-align: left;
+        }
+
+        .chat-sidebar__field-link:hover {
+          color: #1d4ed8;
         }
 
         .chat-sidebar__inline-actions {

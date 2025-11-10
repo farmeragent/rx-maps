@@ -74,6 +74,7 @@ export default function HexQuery() {
   const [highlightedHexes, setHighlightedHexes] = useState<Set<string>>(new Set());
   const [prescriptionMaps, setPrescriptionMaps] = useState<any[]>([]);
   const [selectedPrescriptionLayer, setSelectedPrescriptionLayer] = useState<string | null>(null);
+  const [centerField, setCenterField] = useState<string | null>(null);
 
   // Load GeoJSON data
   useEffect(() => {
@@ -447,6 +448,20 @@ export default function HexQuery() {
       clearActionsById(actionId);
     }
 
+    // Handle view field action
+    if (value.startsWith('view_field:')) {
+      const fieldName = value.replace('view_field:', '');
+      setVisibleFieldNames(new Set([fieldName]));
+      setHighlightedHexes(new Set()); // Clear hex highlights
+      setPrescriptionMaps([]); // Clear prescription maps
+      setSelectedPrescriptionLayer(null); // Clear prescription layer
+      setCurrentView('map');
+      setHasShownMap(true);
+      setIsFullWidth(false); // Switch to sidebar mode
+      setCenterField(fieldName); // Trigger map to center on this field
+      return;
+    }
+
     if (value === 'generate_all_prescriptions') {
       if (!pendingAllFieldsPrompt) {
         return;
@@ -516,6 +531,8 @@ export default function HexQuery() {
                 prescriptionMaps={prescriptionMaps}
                 selectedPrescriptionLayer={selectedPrescriptionLayer}
                 onPrescriptionLayerChange={setSelectedPrescriptionLayer}
+                centerField={centerField}
+                onCenterFieldComplete={() => setCenterField(null)}
               />
             </div>
           )}

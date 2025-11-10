@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { FIELD_CENTERS, FIELD_NAMES } from '../constants';
 
 // Dynamically import deck.gl components (client-side only)
 const DeckGL = dynamic(() => import('@deck.gl/react').then(mod => ({ default: mod.DeckGL })), { ssr: false });
@@ -14,6 +15,8 @@ interface HexMapViewProps {
   prescriptionMaps: any[];
   selectedPrescriptionLayer: string | null;
   onPrescriptionLayerChange: (layer: string | null) => void;
+  centerField: string | null;
+  onCenterFieldComplete: () => void;
 }
 
 export default function HexMapView({
@@ -21,7 +24,9 @@ export default function HexMapView({
   highlightedHexes,
   prescriptionMaps,
   selectedPrescriptionLayer,
-  onPrescriptionLayerChange
+  onPrescriptionLayerChange,
+  centerField,
+  onCenterFieldComplete
 }: HexMapViewProps) {
   const [mounted, setMounted] = useState(false);
   const [hoveredHex, setHoveredHex] = useState<string | null>(null);
@@ -38,6 +43,46 @@ export default function HexMapView({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Handle field centering
+  useEffect(() => {
+    if (!centerField) return;
+
+    // Map field names to FIELD_CENTERS keys
+    let fieldKey: keyof typeof FIELD_CENTERS | null = null;
+
+    if (centerField === FIELD_NAMES.NORTH_OF_ROAD || centerField.toLowerCase() === 'north of road') {
+      fieldKey = 'NORTH_OF_ROAD';
+    } else if (centerField === FIELD_NAMES.SOUTH_OF_ROAD || centerField.toLowerCase() === 'south of road') {
+      fieldKey = 'SOUTH_OF_ROAD';
+    } else if (centerField === FIELD_NAMES.RAILROAD_PIVOT || centerField.toLowerCase() === 'railroad pivot') {
+      fieldKey = 'RAILROAD_PIVOT';
+    }
+
+    if (fieldKey && FIELD_CENTERS[fieldKey]) {
+      const center = FIELD_CENTERS[fieldKey];
+
+      // Animate to the field center
+      setViewState(prev => ({
+        ...prev,
+        longitude: center[0],
+        latitude: center[1],
+        zoom: 15,
+        transitionDuration: 1000,
+        transitionInterpolator: undefined as any
+      }));
+
+      // Call onComplete after animation finishes
+      const timeout = setTimeout(() => {
+        onCenterFieldComplete();
+      }, 1000);
+
+      return () => clearTimeout(timeout);
+    } else {
+      // If field not found, just call complete immediately
+      onCenterFieldComplete();
+    }
+  }, [centerField, onCenterFieldComplete]);
 
   // Helper function to interpolate between colors
   const interpolateColor = (value: number, stops: number[], colors: string[]): number[] => {
