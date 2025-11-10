@@ -37,3 +37,8 @@
 /frontend/*.tsbuildinfo
 /frontend/next-env.d.ts
 
+# swap files
+*.sw*
+
+# generic virtual environments
+*/venv
