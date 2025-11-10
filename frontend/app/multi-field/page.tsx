@@ -2,10 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import AssistantChatPane, {
-  AssistantChatResult,
-  AssistantHistoryMessage
-} from '../../components/AssistantChatPane';
 
 interface StoredMultiFieldPayload {
   question: string;
@@ -17,8 +13,6 @@ interface StoredMultiFieldPayload {
 }
 
 const MULTI_FIELD_STORAGE_KEY = 'assistantMultiField';
-const CHAT_HISTORY_KEY = 'assistantChatHistory';
-
 function formatHeading(value: string) {
   return value
     .replace(/_/g, ' ')
@@ -47,13 +41,11 @@ function renderCell(value: unknown) {
 
 export default function MultiFieldResultsPage() {
   const [payload, setPayload] = useState<StoredMultiFieldPayload | null>(null);
-  const [history, setHistory] = useState<AssistantHistoryMessage[]>([]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     let storedPayload: StoredMultiFieldPayload | null = null;
-    let storedHistory: AssistantHistoryMessage[] | null = null;
 
     try {
       const rawPayload = sessionStorage.getItem(MULTI_FIELD_STORAGE_KEY);
@@ -64,20 +56,8 @@ export default function MultiFieldResultsPage() {
       console.error('Failed to parse multi-field payload:', error);
     }
 
-    try {
-      const rawHistory = sessionStorage.getItem(CHAT_HISTORY_KEY);
-      if (rawHistory) {
-        storedHistory = JSON.parse(rawHistory) as AssistantHistoryMessage[];
-      }
-    } catch (error) {
-      console.error('Failed to parse assistant chat history:', error);
-    }
-
     if (storedPayload) {
       setPayload(storedPayload);
-    }
-    if (storedHistory) {
-      setHistory(storedHistory);
     }
   }, []);
 
@@ -93,31 +73,6 @@ export default function MultiFieldResultsPage() {
     });
     return Array.from(headerSet);
   }, [payload]);
-
-  const handleAssistantResult = (result: AssistantChatResult, question: string) => {
-    if (!result || !Array.isArray(result.results)) {
-      return;
-    }
-
-    const nextPayload: StoredMultiFieldPayload = {
-      question,
-      results: result.results,
-      summary: result.summary,
-      sql: result.sql,
-      count: result.count,
-      timestamp: Date.now()
-    };
-
-    setPayload(nextPayload);
-
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(MULTI_FIELD_STORAGE_KEY, JSON.stringify(nextPayload));
-      } catch (error) {
-        console.error('Failed to persist new multi-field payload:', error);
-      }
-    }
-  };
 
   const rowCount = payload?.results?.length ?? 0;
 
@@ -189,11 +144,6 @@ export default function MultiFieldResultsPage() {
         </section>
       </div>
 
-      <AssistantChatPane
-        initialMessages={history}
-        storageKey={CHAT_HISTORY_KEY}
-        onResult={handleAssistantResult}
-      />
     </div>
   );
 }
