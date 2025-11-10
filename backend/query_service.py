@@ -90,11 +90,22 @@ Important Rules:
 - Use ROUND() for decimal values in aggregations
 - When comparing fields, use GROUP BY field_name
 
+Understanding Rates vs Totals:
+- Columns with "per acre" units (N_to_apply, P_to_apply, K_to_apply, P_in_soil, K_in_soil, N_in_soil) are APPLICATION RATES or CONCENTRATIONS
+- Farmers think in RATES (lbs per acre) by default - this is how they apply fertilizer
+- When a farmer asks "how much nitrogen do I need?" they mean the application RATE (lbs/acre): use AVG(rate)
+- Only calculate TOTALS when the user explicitly asks for "total pounds", "total lbs", "how many pounds total", etc.: use SUM(rate * area)
+- To calculate AVERAGES of rates, just average directly: AVG(rate) - do NOT multiply by area
+- Each hex has an 'area' column representing its size in acres
+
 Example Queries:
 - "Show hexes with low phosphorus" → SELECT h3_index, field_name, P_in_soil FROM agricultural_hexes WHERE P_in_soil < 60
 - "Which field has the lowest phosphorus?" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P_in_soil FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P_in_soil ASC LIMIT 1
 - "Compare fields by average phosphorus" → SELECT field_name, ROUND(AVG(P_in_soil), 2) as avg_P_in_soil FROM agricultural_hexes GROUP BY field_name ORDER BY avg_P_in_soil
-- "How much fertilizer needed per field?" → SELECT field_name, SUM(N_to_apply) as total_N_to_apply, SUM(P_to_apply) as total_P_to_apply, SUM(K_to_apply) as total_K_to_apply FROM agricultural_hexes GROUP BY field_name
+- "How much nitrogen do I need?" → SELECT ROUND(AVG(N_to_apply), 2) as avg_N_to_apply FROM agricultural_hexes (returns rate in lbs/acre)
+- "How much nitrogen per field?" → SELECT field_name, ROUND(AVG(N_to_apply), 2) as avg_N_to_apply FROM agricultural_hexes GROUP BY field_name (returns rate in lbs/acre)
+- "How many total pounds of nitrogen?" → SELECT ROUND(SUM(N_to_apply * area), 2) as total_N_lbs FROM agricultural_hexes (returns total lbs)
+- "Total fertilizer needed per field?" → SELECT field_name, ROUND(SUM(N_to_apply * area), 2) as total_N_lbs, ROUND(SUM(P_to_apply * area), 2) as total_P_lbs, ROUND(SUM(K_to_apply * area), 2) as total_K_lbs FROM agricultural_hexes GROUP BY field_name
 
 Return only valid SQL. Do not include markdown code blocks or explanations."""
 
