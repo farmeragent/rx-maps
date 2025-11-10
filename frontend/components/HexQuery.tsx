@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChatSidebar from './ChatSidebar';
 import HexMapView from './HexMapView';
@@ -28,7 +28,13 @@ interface Message {
 }
 
 const API_BASE_URL = '/api/hex-query';
-const GEOJSON_PATH = '/north-of-road-high-res.geojson';
+
+const GEOJSON_SOURCES = [
+  { path: '/north-of-road-high-res.geojson', fieldName: 'North of Road' },
+  { path: '/south-of-road-high-res.geojson', fieldName: 'South of Road' },
+  { path: '/railroad-pivot-high-res.geojson', fieldName: 'Railroad Pivot' }
+];
+const ALL_FIELD_NAMES = GEOJSON_SOURCES.map(source => source.fieldName);
 
 export default function HexQuery() {
   const searchParams = useSearchParams();
@@ -50,27 +56,73 @@ export default function HexQuery() {
 
   // Map-specific state
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [visibleFieldNames, setVisibleFieldNames] = useState<Set<string>>(new Set());
+  const [hexFieldLookup, setHexFieldLookup] = useState<Record<string, string>>({});
   const [highlightedHexes, setHighlightedHexes] = useState<Set<string>>(new Set());
   const [prescriptionMaps, setPrescriptionMaps] = useState<any[]>([]);
   const [selectedPrescriptionLayer, setSelectedPrescriptionLayer] = useState<string | null>(null);
 
   // Load GeoJSON data
   useEffect(() => {
-    console.log('Loading GeoJSON from:', GEOJSON_PATH);
-    fetch(GEOJSON_PATH)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch GeoJSON: ${res.status} ${res.statusText}`);
+    let isMounted = true;
+
+    const loadGeoJson = async () => {
+      try {
+        console.log('Loading GeoJSON files:', GEOJSON_SOURCES.map(source => source.path));
+        const collections = await Promise.all(
+          GEOJSON_SOURCES.map(async source => {
+            const response = await fetch(source.path);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch GeoJSON "${source.path}": ${response.status} ${response.statusText}`);
+            }
+            const collection = await response.json();
+            const features = (collection?.features || []).map((feature: any) => ({
+              ...feature,
+              properties: {
+                ...feature.properties,
+                field_name: feature?.properties?.field_name || source.fieldName
+              }
+            }));
+            return {
+              fieldName: source.fieldName,
+              features
+            };
+          })
+        );
+
+        if (!isMounted) {
+          return;
         }
-        return res.json();
-      })
-      .then(data => {
-        console.log(`Loaded GeoJSON with ${data.features?.length || 0} features`);
-        setGeoJsonData(data);
-      })
-      .catch(error => {
-        console.error('Failed to load GeoJSON:', error);
-      });
+        const combinedFeatures = collections.flatMap(({ features }) => features);
+        const hexFieldMap: Record<string, string> = {};
+        collections.forEach(({ fieldName, features }) => {
+          features.forEach((feature: any) => {
+            const h3Index = feature?.properties?.h3_index;
+            if (h3Index) {
+              hexFieldMap[h3Index] = fieldName;
+            }
+          });
+        });
+
+        const combinedGeoJson = {
+          type: 'FeatureCollection',
+          features: combinedFeatures
+        };
+
+        console.log(`Loaded GeoJSON with ${combinedFeatures.length} total features`);
+        setGeoJsonData(combinedGeoJson);
+        setHexFieldLookup(hexFieldMap);
+        setVisibleFieldNames(new Set(ALL_FIELD_NAMES));
+      } catch (error) {
+        console.error('Failed to load GeoJSON files:', error);
+      }
+    };
+
+    loadGeoJson();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Handle initial question from URL
@@ -98,6 +150,25 @@ export default function HexQuery() {
 
   const addErrorMessage = (error: string) => {
     setMessages(prev => [...prev, { type: 'error', text: error }]);
+  };
+
+  const determineVisibleFields = (result: QueryResult) => {
+    const fieldNames = new Set<string>();
+
+    if (result.field_name) {
+      fieldNames.add(result.field_name);
+    }
+
+    if (result.hex_ids && result.hex_ids.length > 0) {
+      result.hex_ids.forEach(hexId => {
+        const fieldName = hexFieldLookup[hexId];
+        if (fieldName) {
+          fieldNames.add(fieldName);
+        }
+      });
+    }
+
+    return fieldNames;
   };
 
   const handleSubmit = async (question?: string) => {
@@ -128,10 +199,11 @@ export default function HexQuery() {
         addBotMessage(result.summary);
 
         // Call prescription map API
+        const targetFieldName = result.field_name || 'North of Road';
         const prescriptionResponse = await fetch('/api/prescription-map', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ field_name: result.field_name || 'North of Road' })
+          body: JSON.stringify({ field_name: targetFieldName })
         });
 
         if (!prescriptionResponse.ok) {
@@ -149,6 +221,7 @@ export default function HexQuery() {
           setCurrentView('map'); // Show map for prescription
           setHasShownMap(true); // Mark that we've shown the map at least once
           setIsFullWidth(false); // Switch to sidebar mode
+          setVisibleFieldNames(new Set([targetFieldName]));
         }
 
         // Add success message
@@ -172,7 +245,11 @@ export default function HexQuery() {
           // Highlight hexes on map
           if (result.hex_ids && result.hex_ids.length > 0) {
             setHighlightedHexes(new Set(result.hex_ids));
+          } else {
+            setHighlightedHexes(new Set());
           }
+          const fieldNames = determineVisibleFields(result);
+          setVisibleFieldNames(fieldNames.size > 0 ? fieldNames : new Set(ALL_FIELD_NAMES));
           // Add bot message without table data
           addBotMessage(result.summary, result.sql);
         } else if (result.view_type === 'table') {
@@ -198,6 +275,7 @@ export default function HexQuery() {
       setQueryResult(null);
       setIsFullWidth(true); // Reset to full-width
       setHasShownMap(false); // Reset map state
+      setVisibleFieldNames(new Set(ALL_FIELD_NAMES));
     } catch (error) {
       console.error('Failed to clear history:', error);
     }
@@ -206,6 +284,23 @@ export default function HexQuery() {
   const handleToggleWidth = () => {
     setIsFullWidth(!isFullWidth);
   };
+
+  const filteredGeoJsonData = useMemo(() => {
+    if (!geoJsonData) {
+      return null;
+    }
+
+    if (!visibleFieldNames || visibleFieldNames.size === 0) {
+      return geoJsonData;
+    }
+
+    return {
+      ...geoJsonData,
+      features: geoJsonData.features.filter((feature: any) =>
+        visibleFieldNames.has(feature?.properties?.field_name)
+      )
+    };
+  }, [geoJsonData, visibleFieldNames]);
 
   return (
     <div className="hex-query-container">
@@ -224,7 +319,7 @@ export default function HexQuery() {
       {!isFullWidth && (
         <div className="hex-query-content">
           {/* Only mount map when first needed, then keep mounted to avoid WebGL context recreation */}
-          {geoJsonData && hasShownMap && (
+          {filteredGeoJsonData && hasShownMap && (
             <div
               className="hex-query-map-container"
               style={{
@@ -238,7 +333,7 @@ export default function HexQuery() {
               }}
             >
               <HexMapView
-                geoJsonData={geoJsonData}
+                geoJsonData={filteredGeoJsonData}
                 highlightedHexes={highlightedHexes}
                 prescriptionMaps={prescriptionMaps}
                 selectedPrescriptionLayer={selectedPrescriptionLayer}
