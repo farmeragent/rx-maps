@@ -186,7 +186,12 @@ Return only valid SQL. Do not include markdown code blocks or explanations."""
         Returns:
             Dictionary with intent and extracted parameters
         """
-        intent_prompt = """You are analyzing user requests to determine their intent.
+        # Get valid field names from schema
+        schema_info = self.db.get_schema_info()
+        field_names = schema_info.get('field_names', [])
+        field_names_text = ", ".join([f"'{name}'" for name in field_names]) if field_names else "No fields defined"
+
+        intent_prompt = f"""You are analyzing user requests to determine their intent.
 
 Classify the user's request into one of these categories:
 
@@ -196,9 +201,14 @@ Classify the user's request into one of these categories:
 2. "query" - User wants to query/search/analyze data
    Examples: "show me hexes with low P", "what's the average yield", "find areas that need fertilizer"
 
+Valid Field Names (use EXACTLY as shown if mentioned):
+{field_names_text}
+
 Respond in this exact format:
 INTENT: <prescription_map or query>
-FIELD: <field name if mentioned, otherwise "all">
+FIELD: <exact field name if mentioned, otherwise "all">
+
+Important: If the user mentions a field, use the EXACT field name from the valid list above. Match it case-insensitively but return the exact capitalization.
 
 User request: """
 
@@ -223,6 +233,7 @@ User request: """
                     intent = line.split(':', 1)[1].strip()
                 elif line.startswith('FIELD:'):
                     field_value = line.split(':', 1)[1].strip()
+                    # Accept any field value that's not 'all', 'none', or empty
                     if field_value.lower() not in ['all', 'none', '']:
                         field_name = field_value
 

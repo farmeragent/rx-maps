@@ -144,6 +144,7 @@ async def query_database(request: QueryRequest):
             question=result['question'],
             sql=result['sql'],
             intent=result['intent'],
+            field_name=result.get('field_name'),
             results=result['results'],
             hex_ids=result['hex_ids'],
             count=result['count'],
