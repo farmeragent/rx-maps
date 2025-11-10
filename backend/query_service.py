@@ -83,6 +83,7 @@ Valid Field Names (use EXACTLY as shown):
         prompt += """
 Important Rules:
 - ALWAYS include h3_index in SELECT when showing/finding specific hexes (needed for map highlighting)
+- ALWAYS include field_name in SELECT when showing/finding specific hexes (needed for field identification)
 - Use EXACT field names from the Valid Field Names list above - do not modify or guess field names
 - When using aggregations with aliases, preserve the base column name in the alias (e.g., SUM(N_to_apply) as total_N_to_apply, AVG(P_in_soil) as avg_P_in_soil)
 - Return ONLY the SQL query, no explanations or markdown code blocks
@@ -302,9 +303,18 @@ User request: """
             column_names = list(results[0].keys())
             column_metadata = self._get_column_metadata(column_names)
 
+        # Extract field name if query is focused on a single field
+        field_name = None
+        if results and len(results) > 0 and 'field_name' in results[0]:
+            # Check if all results have the same field_name
+            unique_fields = set(row['field_name'] for row in results if 'field_name' in row)
+            if len(unique_fields) == 1:
+                field_name = list(unique_fields)[0]
+
         return {
             "question": question,
             "intent": "query",
+            "field_name": field_name,
             "sql": sql,
             "results": results,
             "hex_ids": hex_ids,

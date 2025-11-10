@@ -263,6 +263,7 @@ export default function HexQuery() {
           setHasShownMap(true); // Mark that we've shown the map at least once
           setIsFullWidth(false); // Switch to sidebar mode
           setVisibleFieldNames(new Set([targetFieldName]));
+          setCenterField(targetFieldName); // Center map on this field
         }
 
         setLastPrescriptionField(targetFieldName);
@@ -305,6 +306,13 @@ export default function HexQuery() {
           }
           const fieldNames = determineVisibleFields(result);
           setVisibleFieldNames(fieldNames.size > 0 ? fieldNames : new Set(ALL_FIELD_NAMES));
+
+          // Center on field if there's only one visible field
+          if (fieldNames.size === 1) {
+            const fieldName = Array.from(fieldNames)[0];
+            setCenterField(fieldName);
+          }
+
           // Add bot message without table data
           addBotMessage(result.summary, { sql: result.sql });
         } else if (result.view_type === 'table') {
