@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ChatSidebar from './ChatSidebar';
 import HexMapView from './HexMapView';
 
@@ -18,6 +18,14 @@ interface QueryResult {
   column_metadata?: Record<string, { display_name: string; unit?: string }>;
 }
 
+type ChatActionVariant = 'primary' | 'secondary' | 'link';
+
+interface ChatAction {
+  label: string;
+  value: string;
+  variant?: ChatActionVariant;
+}
+
 interface Message {
   type: 'user' | 'bot' | 'error';
   text: string;
@@ -25,6 +33,8 @@ interface Message {
   metadata?: string;
   tableData?: any[];
   columnMetadata?: Record<string, { display_name: string; unit?: string }>;
+  actions?: ChatAction[];
+  actionId?: string;
 }
 
 const API_BASE_URL = '/api/hex-query';
@@ -38,6 +48,7 @@ const ALL_FIELD_NAMES = GEOJSON_SOURCES.map(source => source.fieldName);
 
 export default function HexQuery() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialQuestion = searchParams?.get('question') || '';
   const hasSubmittedInitialQuestion = useRef(false);
 
@@ -53,6 +64,8 @@ export default function HexQuery() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [hasShownMap, setHasShownMap] = useState(false);
   const [isFullWidth, setIsFullWidth] = useState(true); // Start with full-width chat
+  const [pendingAllFieldsPrompt, setPendingAllFieldsPrompt] = useState(false);
+  const [lastPrescriptionField, setLastPrescriptionField] = useState<string | null>(null);
 
   // Map-specific state
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -140,16 +153,44 @@ export default function HexQuery() {
 
   const addBotMessage = (
     text: string,
-    sql?: string,
-    metadata?: string,
-    tableData?: any[],
-    columnMetadata?: Record<string, { display_name: string; unit?: string }>
+    options?: {
+      sql?: string;
+      metadata?: string;
+      tableData?: any[];
+      columnMetadata?: Record<string, { display_name: string; unit?: string }>;
+      actions?: ChatAction[];
+      actionId?: string;
+    }
   ) => {
-    setMessages(prev => [...prev, { type: 'bot', text, sql, metadata, tableData, columnMetadata }]);
+    setMessages(prev => [
+      ...prev,
+      {
+        type: 'bot',
+        text,
+        sql: options?.sql,
+        metadata: options?.metadata,
+        tableData: options?.tableData,
+        columnMetadata: options?.columnMetadata,
+        actions: options?.actions,
+        actionId: options?.actionId
+      }
+    ]);
   };
 
   const addErrorMessage = (error: string) => {
     setMessages(prev => [...prev, { type: 'error', text: error }]);
+  };
+
+  const clearActionsById = (actionId?: string) => {
+    if (!actionId) {
+      return;
+    }
+
+    setMessages(prev =>
+      prev.map(message =>
+        message.actionId === actionId ? { ...message, actions: undefined } : message
+      )
+    );
   };
 
   const determineVisibleFields = (result: QueryResult) => {
@@ -178,6 +219,8 @@ export default function HexQuery() {
     setInputValue('');
     addUserMessage(q);
     setIsLoading(true);
+    setPendingAllFieldsPrompt(false);
+    clearActionsById('all-fields-prompt');
 
     try {
       const response = await fetch(API_BASE_URL, {
@@ -224,14 +267,29 @@ export default function HexQuery() {
           setVisibleFieldNames(new Set([targetFieldName]));
         }
 
+        setLastPrescriptionField(targetFieldName);
+        setPendingAllFieldsPrompt(false);
+
         // Add success message
         const passCount = prescriptionData.prescription_maps?.length || 0;
         addBotMessage(
           `✓ Created ${passCount} prescription passes for ${prescriptionData.summary?.field_name || 'the field'}:\n` +
-          prescriptionData.prescription_maps.map((pm: any) =>
-            `• ${pm.pass}: ${pm.geojson.features[0].properties.rate} ${pm.geojson.features[0].properties.unit}`
-          ).join('\n')
+            prescriptionData.prescription_maps
+              .map(
+                (pm: any) =>
+                  `• ${pm.pass}: ${pm.geojson.features[0].properties.rate} ${pm.geojson.features[0].properties.unit}`
+              )
+              .join('\n')
         );
+
+        addBotMessage('Would you like me to create prescription maps for all fields as well?', {
+          actions: [
+            { label: 'Yes, include all fields', value: 'generate_all_prescriptions', variant: 'primary' },
+            { label: 'No, just this field', value: 'skip_generate_all', variant: 'secondary' }
+          ],
+          actionId: 'all-fields-prompt'
+        });
+        setPendingAllFieldsPrompt(true);
       } else {
         // Normal query flow
         setIsLoading(false);
@@ -251,13 +309,17 @@ export default function HexQuery() {
           const fieldNames = determineVisibleFields(result);
           setVisibleFieldNames(fieldNames.size > 0 ? fieldNames : new Set(ALL_FIELD_NAMES));
           // Add bot message without table data
-          addBotMessage(result.summary, result.sql);
+          addBotMessage(result.summary, { sql: result.sql });
         } else if (result.view_type === 'table') {
           // Table view: embed in chat, don't change main view
-          addBotMessage(result.summary, result.sql, undefined, result.results, result.column_metadata);
+          addBotMessage(result.summary, {
+            sql: result.sql,
+            tableData: result.results,
+            columnMetadata: result.column_metadata
+          });
         } else {
           // Simple answer: keep current view, show in chat only
-          addBotMessage(result.summary, result.sql);
+          addBotMessage(result.summary, { sql: result.sql });
         }
       }
     } catch (error) {
@@ -276,6 +338,8 @@ export default function HexQuery() {
       setIsFullWidth(true); // Reset to full-width
       setHasShownMap(false); // Reset map state
       setVisibleFieldNames(new Set(ALL_FIELD_NAMES));
+      setPendingAllFieldsPrompt(false);
+      setLastPrescriptionField(null);
     } catch (error) {
       console.error('Failed to clear history:', error);
     }
@@ -283,6 +347,119 @@ export default function HexQuery() {
 
   const handleToggleWidth = () => {
     setIsFullWidth(!isFullWidth);
+  };
+
+  const handleGenerateAllFields = async () => {
+    setIsLoading(true);
+    setPendingAllFieldsPrompt(false);
+
+    try {
+      addUserMessage('Yes, include all fields.');
+
+      const tableRows: Array<Record<string, number | string>> = [];
+      const nutrientUnits: Record<'nitrogen' | 'phosphorus' | 'potassium', string | undefined> = {
+        nitrogen: undefined,
+        phosphorus: undefined,
+        potassium: undefined
+      };
+
+      for (const fieldName of ALL_FIELD_NAMES) {
+        const response = await fetch('/api/prescription-map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field_name: fieldName })
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.detail || `Failed to create prescription maps for ${fieldName}`);
+        }
+
+        const data = await response.json();
+        const row: Record<string, number | string> = {
+          field: data.summary?.field_name || fieldName,
+          nitrogen: '',
+          phosphorus: '',
+          potassium: ''
+        };
+
+        const passes: any[] = data.prescription_maps || [];
+        passes.forEach((pm: any) => {
+          const passName = typeof pm.pass === 'string' ? pm.pass.toLowerCase() : '';
+          const feature = pm.geojson?.features?.[0];
+          const rate = feature?.properties?.rate ?? null;
+          const unit = feature?.properties?.unit;
+
+          if (passName.includes('nitrogen')) {
+            row.nitrogen = rate ?? '';
+            nutrientUnits.nitrogen = nutrientUnits.nitrogen || unit;
+          } else if (passName.includes('phosphorus')) {
+            row.phosphorus = rate ?? '';
+            nutrientUnits.phosphorus = nutrientUnits.phosphorus || unit;
+          } else if (passName.includes('potassium')) {
+            row.potassium = rate ?? '';
+            nutrientUnits.potassium = nutrientUnits.potassium || unit;
+          }
+        });
+
+        tableRows.push(row);
+      }
+
+      const columnMetadata = {
+        field: { display_name: 'Field' },
+        nitrogen: {
+          display_name: 'Nitrogen',
+          unit: nutrientUnits.nitrogen
+        },
+        phosphorus: {
+          display_name: 'Phosphorus',
+          unit: nutrientUnits.phosphorus
+        },
+        potassium: {
+          display_name: 'Potassium',
+          unit: nutrientUnits.potassium
+        }
+      };
+
+      addBotMessage('Here is the nutrient plan for all fields:', {
+        tableData: tableRows,
+        columnMetadata,
+        actions: [
+          {
+            label: 'Open Field Management Dashboard',
+            value: 'open_dashboard',
+            variant: 'primary'
+          }
+        ],
+        actionId: 'dashboard-link'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to generate prescriptions for all fields.';
+      addErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMessageAction = async (value: string, actionId?: string) => {
+    if (actionId && actionId !== 'dashboard-link') {
+      clearActionsById(actionId);
+    }
+
+    if (value === 'generate_all_prescriptions') {
+      if (!pendingAllFieldsPrompt) {
+        return;
+      }
+      await handleGenerateAllFields();
+    } else if (value === 'skip_generate_all') {
+      setPendingAllFieldsPrompt(false);
+      const fieldLabel = lastPrescriptionField ? ` for ${lastPrescriptionField}` : '';
+      addUserMessage('No, just this field.');
+      addBotMessage(`Okay, I'll stick with the maps${fieldLabel}. Let me know if you need anything else.`);
+    } else if (value === 'open_dashboard') {
+      router.push('/dashboard');
+    }
   };
 
   const filteredGeoJsonData = useMemo(() => {
@@ -314,6 +491,7 @@ export default function HexQuery() {
         isLoading={isLoading}
         isFullWidth={isFullWidth}
         hasShownMap={hasShownMap}
+        onAction={handleMessageAction}
       />
 
       {!isFullWidth && (

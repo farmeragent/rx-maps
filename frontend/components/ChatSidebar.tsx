@@ -3,6 +3,14 @@
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 
+type ChatActionVariant = 'primary' | 'secondary' | 'link';
+
+interface MessageAction {
+  label: string;
+  value: string;
+  variant?: ChatActionVariant;
+}
+
 interface Message {
   type: 'user' | 'bot' | 'error';
   text: string;
@@ -10,6 +18,8 @@ interface Message {
   metadata?: string;
   tableData?: any[];
   columnMetadata?: Record<string, { display_name: string; unit?: string }>;
+  actions?: MessageAction[];
+  actionId?: string;
 }
 
 interface ChatSidebarProps {
@@ -22,6 +32,7 @@ interface ChatSidebarProps {
   isLoading: boolean;
   isFullWidth: boolean;
   hasShownMap: boolean;
+  onAction: (value: string, actionId?: string) => void;
 }
 
 export default function ChatSidebar({
@@ -33,7 +44,8 @@ export default function ChatSidebar({
   onToggleWidth,
   isLoading,
   isFullWidth,
-  hasShownMap
+  hasShownMap,
+  onAction
 }: ChatSidebarProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -144,6 +156,29 @@ export default function ChatSidebar({
                     </table>
                   </div>
                 </details>
+              )}
+              {message.actions && message.actions.length > 0 && (
+                <div className="chat-sidebar__inline-actions">
+                  {message.actions.map((action) => {
+                    const actionClass =
+                      action.variant === 'primary'
+                        ? 'chat-sidebar__inline-action-btn chat-sidebar__inline-action-btn--primary'
+                        : action.variant === 'secondary'
+                        ? 'chat-sidebar__inline-action-btn chat-sidebar__inline-action-btn--secondary'
+                        : 'chat-sidebar__inline-action-btn chat-sidebar__inline-action-btn--link';
+
+                    return (
+                      <button
+                        key={action.value}
+                        type="button"
+                        className={actionClass}
+                        onClick={() => onAction(action.value, message.actionId)}
+                      >
+                        {action.label}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
               {message.sql && (
                 <details className="chat-sidebar__sql-details">
@@ -482,6 +517,51 @@ export default function ChatSidebar({
 
         .chat-sidebar__table tbody tr:last-child td {
           border-bottom: none;
+        }
+
+        .chat-sidebar__inline-actions {
+          margin-top: 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .chat-sidebar__inline-action-btn {
+          padding: 8px 14px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .chat-sidebar__inline-action-btn--primary {
+          background: #2563eb;
+          color: white;
+        }
+
+        .chat-sidebar__inline-action-btn--primary:hover {
+          background: #1d4ed8;
+        }
+
+        .chat-sidebar__inline-action-btn--secondary {
+          background: #f3f4f6;
+          color: #1f2937;
+        }
+
+        .chat-sidebar__inline-action-btn--secondary:hover {
+          background: #e5e7eb;
+        }
+
+        .chat-sidebar__inline-action-btn--link {
+          background: transparent;
+          color: #2563eb;
+          border-color: #2563eb;
+        }
+
+        .chat-sidebar__inline-action-btn--link:hover {
+          background: rgba(37, 99, 235, 0.1);
         }
 
         .chat-sidebar__composer {
