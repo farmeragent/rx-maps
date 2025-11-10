@@ -9,6 +9,7 @@ import FertilityTimeline from '../../components/FertilityTimeline';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
+import HexMapView from '../../components/HexMapView';
 
 const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 
@@ -43,21 +44,6 @@ export default function DashboardPage() {
   const [page, setPage] = useState<PageKey>('fields');
   const [nutrientCurrent, setNutrientCurrent] = useState<'n-current'|'p-current'|'k-current'>('n-current');
   const [nutrientNeeded, setNutrientNeeded] = useState<'n-needed'|'p-needed'|'k-needed'>('n-needed');
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { yieldGoal?: File; soilSample?: File }>>({});
-  const [fieldUploadStatus, setFieldUploadStatus] = useState<Record<string, { yieldGoal: boolean; soilSample: boolean }>>({});
-  
-  const generateRandomFieldCost = () => {
-    const total = Math.floor(Math.random() * (100000 - 50000 + 1)) + 50000;
-    const perAcre = parseFloat((Math.random() * (200 - 100) + 100).toFixed(2));
-    return { total, perAcre };
-  };
-
-  const createEmptyPassCosts = () => ({
-    '1': { total: 0, perAcre: 0 },
-    '2': { total: 0, perAcre: 0 },
-    '3': { total: 0, perAcre: 0 }
-  });
-
   const handleChatSubmit = () => {
     const question = chatInputValue.trim();
     if (!question) {
@@ -192,49 +178,6 @@ export default function DashboardPage() {
     setPage('fields');
   }
 
-  async function handleFileUpload(fieldName: string, type: 'yieldGoal' | 'soilSample', event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (file) {
-      setUploadedFiles(prev => ({
-        ...prev,
-        [fieldName]: {
-          ...prev[fieldName],
-          [type]: file
-        }
-      }));
-      
-      // Update Edge Config
-      try {
-        const response = await fetch('/api/field-uploads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fieldName,
-            uploadType: type,
-            uploaded: true
-          })
-        });
-        
-        if (response.ok) {
-          const updatedStatus = await response.json();
-          setFieldUploadStatus(updatedStatus);
-        }
-      } catch (error) {
-        console.error('Error updating upload status:', error);
-      }
-    }
-  }
-  
-  function viewYieldGoal(fieldName: string) {
-    setCurrentField(fieldName);
-    setPage('yield-view');
-  }
-  
-  function viewSoilSample(fieldName: string) {
-    setCurrentField(fieldName);
-    setPage('nutrient-capacity-view');
-  }
-
   // Fetch all passes from Edge Config
   useEffect(() => {
     async function fetchPasses() {
@@ -264,25 +207,6 @@ export default function DashboardPage() {
     }
   }, [page]);
   
-  // Fetch field upload status from Edge Config
-  useEffect(() => {
-    async function fetchUploadStatus() {
-      try {
-        const response = await fetch('/api/field-uploads');
-        if (response.ok) {
-          const status = await response.json();
-          setFieldUploadStatus(status);
-        }
-      } catch (error) {
-        console.error('Error fetching upload status:', error);
-      }
-    }
-    
-    if (page === 'fields') {
-      fetchUploadStatus();
-    }
-  }, [page]);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = sessionStorage.getItem('dashboardDynamic');
@@ -362,10 +286,8 @@ export default function DashboardPage() {
                   <th style={styles.tableTh}>Field Name</th>
                   {dynamicColumns.length === 0 && (
                     <>
-                      <th style={styles.tableTh}>Yield Goal</th>
-                      <th style={styles.tableTh}>Soil Sample</th>
-                      <th style={styles.tableTh}>Plan</th>
-                      <th style={styles.tableTh}>Maps</th>
+                      <th style={styles.tableTh}>Passes</th>
+                      <th style={styles.tableTh}>Rx Maps</th>
                       <th style={styles.tableTh}>Total Cost</th>
                       <th style={styles.tableTh}>Cost per acre</th>
                       <th style={styles.tableTh}>Send map to machine</th>
@@ -377,14 +299,10 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {[[FIELD_NAMES.NORTH_OF_ROAD,'Corn'],[FIELD_NAMES.SOUTH_OF_ROAD,'Corn'],[FIELD_NAMES.RAILROAD_PIVOT,'Corn']].map(([name,crop]) => {
-                  const fieldFiles = uploadedFiles[name] || {};
+                {[FIELD_NAMES.NORTH_OF_ROAD, FIELD_NAMES.SOUTH_OF_ROAD, FIELD_NAMES.RAILROAD_PIVOT].map((name) => {
                   const costs = fieldCosts[name] || { total: 75000, perAcre: 150 };
                   const isExpanded = expandedRow === name;
                   const fieldPassCosts = passCosts[name] || {};
-                  const uploadStatus = fieldUploadStatus[name] || { yieldGoal: false, soilSample: false };
-                  const hasYieldGoal = uploadStatus.yieldGoal || fieldFiles.yieldGoal;
-                  const hasSoilSample = uploadStatus.soilSample || fieldFiles.soilSample;
                   const dynamicValues = dynamicFieldValues[name] || {};
                   return (
                     <>
@@ -422,82 +340,6 @@ export default function DashboardPage() {
                       <td style={{...styles.tableTd, ...styles.fieldName}}>{name}</td>
                       {dynamicColumns.length === 0 && (
                         <>
-                          <td style={styles.tableTd}>
-                            {hasYieldGoal ? (
-                              <button 
-                                style={{
-                                  ...styles.primaryBtn,
-                                  background: '#27ae60',
-                                  padding: '8px 16px',
-                                  fontSize: '12px'
-                                }}
-                                onClick={() => viewYieldGoal(name)}
-                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-                              >
-                                View
-                              </button>
-                            ) : (
-                              <label style={{ display: 'inline-block', cursor: 'pointer' }}>
-                                <input
-                                  type="file"
-                                  accept=".csv,.xlsx,.xls,.json"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => handleFileUpload(name, 'yieldGoal', e)}
-                                />
-                                <button 
-                                  style={{
-                                    ...styles.primaryBtn,
-                                    background: 'linear-gradient(135deg,#2d5016,#4a7c59)',
-                                    padding: '8px 16px',
-                                    fontSize: '12px'
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-                                >
-                                  Upload
-                                </button>
-                              </label>
-                            )}
-                          </td>
-                          <td style={styles.tableTd}>
-                            {hasSoilSample ? (
-                              <button 
-                                style={{
-                                  ...styles.primaryBtn,
-                                  background: '#27ae60',
-                                  padding: '8px 16px',
-                                  fontSize: '12px'
-                                }}
-                                onClick={() => viewSoilSample(name)}
-                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-                              >
-                                View
-                              </button>
-                            ) : (
-                              <label style={{ display: 'inline-block', cursor: 'pointer' }}>
-                                <input
-                                  type="file"
-                                  accept=".csv,.xlsx,.xls,.json"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => handleFileUpload(name, 'soilSample', e)}
-                                />
-                                <button 
-                                  style={{
-                                    ...styles.primaryBtn,
-                                    background: 'linear-gradient(135deg,#2d5016,#4a7c59)',
-                                    padding: '8px 16px',
-                                    fontSize: '12px'
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
-                                >
-                                  Upload
-                                </button>
-                              </label>
-                            )}
-                          </td>
                           <td style={{...styles.tableTd, textAlign: 'left'}}>
                             <div style={{ 
                               display: 'flex', 
@@ -543,7 +385,7 @@ export default function DashboardPage() {
                             </div>
                           </td>
                           <td style={styles.tableTd}>
-                            <button style={styles.primaryBtn} onClick={() => createPlan(name)} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}>Generate Maps</button>
+                            <button style={styles.primaryBtn} onClick={() => createPlan(name)} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}>View Rx</button>
                           </td>
                           <td style={styles.tableTd}>
                             ${costs.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -583,7 +425,7 @@ export default function DashboardPage() {
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={9 + dynamicColumns.length} style={{ padding: 0, backgroundColor: '#f8f9fa', borderTop: '2px solid #4a7c59' }}>
+                        <td colSpan={7 + dynamicColumns.length} style={{ padding: 0, backgroundColor: '#f8f9fa', borderTop: '2px solid #4a7c59' }}>
                           <div style={{ padding: '20px', backgroundColor: '#f8f9fa' }}>
                             <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50', fontSize: '18px' }}>Pass Breakdown for {name}</h3>
                             <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
