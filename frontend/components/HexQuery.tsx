@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ChatSidebar, { ChatMessageAction } from './ChatSidebar';
 import HexMapView from './HexMapView';
 import { usePersistentChat } from '../hooks/usePersistentChat';
-import { DEFAULT_CHAT_MESSAGES } from '../constants/chat';
+import { DEFAULT_CHAT_MESSAGES } from '../constants';
 
 interface QueryResult {
   question: string;
