@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ChatSidebar from './ChatSidebar';
+import ChatSidebar, { ChatMessageAction } from './ChatSidebar';
 import HexMapView from './HexMapView';
+import { usePersistentChat } from '../hooks/usePersistentChat';
+import { DEFAULT_CHAT_MESSAGES } from '../constants/chat';
 
 interface QueryResult {
   question: string;
@@ -16,25 +18,6 @@ interface QueryResult {
   summary: string;
   view_type?: 'map' | 'table' | null;
   column_metadata?: Record<string, { display_name: string; unit?: string }>;
-}
-
-type ChatActionVariant = 'primary' | 'secondary' | 'link';
-
-interface ChatAction {
-  label: string;
-  value: string;
-  variant?: ChatActionVariant;
-}
-
-interface Message {
-  type: 'user' | 'bot' | 'error';
-  text: string;
-  sql?: string;
-  metadata?: string;
-  tableData?: any[];
-  columnMetadata?: Record<string, { display_name: string; unit?: string }>;
-  actions?: ChatAction[];
-  actionId?: string;
 }
 
 const API_BASE_URL = '/api/hex-query';
@@ -52,12 +35,12 @@ export default function HexQuery() {
   const initialQuestion = searchParams?.get('question') || '';
   const hasSubmittedInitialQuestion = useRef(false);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      type: 'bot',
-      text: '👋 Hi! I can help you query your agricultural hex data. Try asking:\n• "Show me hexes with low phosphorus"\n• "What\'s the average yield target?"\n• "Find hexes that need more than 100 units of nitrogen"\n• "Show hexes with high yield and low potassium"'
-    }
-  ]);
+  const {
+    messages,
+    setMessages,
+    resetMessages,
+    isHydrated: isChatHydrated
+  } = usePersistentChat({ initialMessages: DEFAULT_CHAT_MESSAGES });
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'map' | 'table' | null>(null);
@@ -141,12 +124,20 @@ export default function HexQuery() {
 
   // Handle initial question from URL
   useEffect(() => {
-    if (initialQuestion && messages.length === 1 && !hasSubmittedInitialQuestion.current) {
-      hasSubmittedInitialQuestion.current = true;
-      setInputValue(initialQuestion);
-      handleSubmit(initialQuestion);
+    if (!isChatHydrated || !initialQuestion || hasSubmittedInitialQuestion.current) {
+      return;
     }
-  }, [initialQuestion, messages.length]);
+
+    hasSubmittedInitialQuestion.current = true;
+    setInputValue(initialQuestion);
+
+    const lastMessage = messages[messages.length - 1];
+    const skipAddingUserMessage =
+      lastMessage?.type === 'user' &&
+      lastMessage.text.trim().toLowerCase() === initialQuestion.trim().toLowerCase();
+
+    void handleSubmit(initialQuestion, { skipAddingUserMessage });
+  }, [initialQuestion, isChatHydrated, messages, handleSubmit]);
 
   const addUserMessage = (text: string) => {
     setMessages(prev => [...prev, { type: 'user', text }]);
@@ -159,7 +150,7 @@ export default function HexQuery() {
       metadata?: string;
       tableData?: any[];
       columnMetadata?: Record<string, { display_name: string; unit?: string }>;
-      actions?: ChatAction[];
+      actions?: ChatMessageAction[];
       actionId?: string;
     }
   ) => {
@@ -213,12 +204,19 @@ export default function HexQuery() {
     return fieldNames;
   };
 
-  const handleSubmit = async (question?: string) => {
+  async function handleSubmit(
+    question?: string,
+    options?: {
+      skipAddingUserMessage?: boolean;
+    }
+  ) {
     const q = question || inputValue.trim();
     if (!q || isLoading) return;
 
     setInputValue('');
-    addUserMessage(q);
+    if (!options?.skipAddingUserMessage) {
+      addUserMessage(q);
+    }
     setIsLoading(true);
     setPendingAllFieldsPrompt(false);
     clearActionsById('all-fields-prompt');
@@ -313,11 +311,11 @@ export default function HexQuery() {
           addBotMessage(result.summary, { sql: result.sql });
         } else if (result.view_type === 'table') {
           // Table view: embed in chat, don't change main view
-          addBotMessage(result.summary, {
-            sql: result.sql,
-            tableData: result.results,
-            columnMetadata: result.column_metadata
-          });
+      addBotMessage(result.summary, {
+        sql: result.sql,
+        tableData: result.results,
+        columnMetadata: result.column_metadata
+      });
         } else {
           // Simple answer: keep current view, show in chat only
           addBotMessage(result.summary, { sql: result.sql });
@@ -327,12 +325,12 @@ export default function HexQuery() {
       setIsLoading(false);
       addErrorMessage(error instanceof Error ? error.message : 'Query failed. Please try again.');
     }
-  };
+  }
 
   const handleClearHistory = async () => {
     try {
       await fetch('/api/hex-query/clear-history', { method: 'POST' });
-      setMessages([messages[0]]); // Keep welcome message
+      resetMessages(); // Keep welcome message
       setHighlightedHexes(new Set());
       setCurrentView(null);
       setQueryResult(null);

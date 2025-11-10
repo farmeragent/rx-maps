@@ -3,27 +3,27 @@
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 
-type ChatActionVariant = 'primary' | 'secondary' | 'link';
+export type ChatActionVariant = 'primary' | 'secondary' | 'link';
 
-interface MessageAction {
+export interface ChatMessageAction {
   label: string;
   value: string;
   variant?: ChatActionVariant;
 }
 
-interface Message {
+export interface ChatMessage {
   type: 'user' | 'bot' | 'error';
   text: string;
   sql?: string;
   metadata?: string;
   tableData?: any[];
   columnMetadata?: Record<string, { display_name: string; unit?: string }>;
-  actions?: MessageAction[];
+  actions?: ChatMessageAction[];
   actionId?: string;
 }
 
 interface ChatSidebarProps {
-  messages: Message[];
+  messages: ChatMessage[];
   inputValue: string;
   onInputChange: (value: string) => void;
   onSubmit: () => void;

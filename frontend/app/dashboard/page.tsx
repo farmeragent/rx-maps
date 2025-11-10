@@ -2,9 +2,13 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import styles from '../pageStyles';
 import { FIELD_NAMES } from '../../constants';
 import FertilityTimeline from '../../components/FertilityTimeline';
+import ChatSidebar from '../../components/ChatSidebar';
+import { usePersistentChat } from '../../hooks/usePersistentChat';
+import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
 
 const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 
@@ -27,6 +31,14 @@ interface PhaseData {
 type TimelineData = Record<Phase, PhaseData>;
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const {
+    messages: chatMessages,
+    setMessages: setChatMessages,
+    resetMessages: resetChatMessages
+  } = usePersistentChat({ initialMessages: DEFAULT_CHAT_MESSAGES });
+  const [chatInputValue, setChatInputValue] = useState('');
+  const [isChatFullWidth, setIsChatFullWidth] = useState(false);
   const [currentField, setCurrentField] = useState<string>('');
   const [page, setPage] = useState<PageKey>('fields');
   const [nutrientCurrent, setNutrientCurrent] = useState<'n-current'|'p-current'|'k-current'>('n-current');
@@ -45,6 +57,65 @@ export default function DashboardPage() {
     '2': { total: 0, perAcre: 0 },
     '3': { total: 0, perAcre: 0 }
   });
+
+  const handleChatSubmit = () => {
+    const question = chatInputValue.trim();
+    if (!question) {
+      return;
+    }
+
+    setChatInputValue('');
+    setIsChatFullWidth(false);
+    router.push(`/hex-query?question=${encodeURIComponent(question)}`);
+  };
+
+  const handleChatClearHistory = () => {
+    resetChatMessages();
+    setChatInputValue('');
+    setIsChatFullWidth(false);
+  };
+
+  const handleChatToggleWidth = () => {
+    setIsChatFullWidth((prev) => !prev);
+  };
+
+  const clearChatActionsById = (actionId?: string) => {
+    if (!actionId) {
+      return;
+    }
+
+    setChatMessages((prev) =>
+      prev.map((message) =>
+        message.actionId === actionId ? { ...message, actions: undefined } : message
+      )
+    );
+  };
+
+  const handleChatAction = (value: string, actionId?: string) => {
+    if (actionId && actionId !== 'dashboard-link') {
+      clearChatActionsById(actionId);
+    }
+
+    if (value === 'open_dashboard') {
+      setIsChatFullWidth(false);
+      return;
+    }
+
+    if (value === 'generate_all_prescriptions') {
+      setIsChatFullWidth(false);
+      router.push('/hex-query?question=Generate%20prescription%20maps%20for%20all%20fields');
+      return;
+    }
+
+    if (value === 'skip_generate_all') {
+      setIsChatFullWidth(false);
+      router.push('/hex-query');
+      return;
+    }
+
+    setIsChatFullWidth(false);
+    router.push(`/hex-query?question=${encodeURIComponent(value)}`);
+  };
 
   const [fieldCosts] = useState<Record<string, { total: number; perAcre: number }>>(() => {
     const costs: Record<string, { total: number; perAcre: number }> = {};
@@ -258,7 +329,22 @@ export default function DashboardPage() {
   return (
     <div style={styles.appRoot}>
       {page === 'fields' && (
-        <div style={styles.container}> 
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+          <ChatSidebar
+            messages={chatMessages}
+            inputValue={chatInputValue}
+            onInputChange={setChatInputValue}
+            onSubmit={handleChatSubmit}
+            onClearHistory={handleChatClearHistory}
+            onToggleWidth={handleChatToggleWidth}
+            isLoading={false}
+            isFullWidth={isChatFullWidth}
+            hasShownMap
+            onAction={handleChatAction}
+          />
+          {!isChatFullWidth && (
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div style={styles.container}> 
           <div style={styles.headerBox}>
             <h2 style={styles.headerTitle}>Field Management Dashboard</h2>
             <p style={styles.headerSub}>Select a field to create a fertilization plan</p>
@@ -539,6 +625,9 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+          )}
         </div>
       )}
 
