@@ -102,7 +102,7 @@ export default function FertilizerPhilosophyPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: THEME.BACKGROUND.HERO_ALT,
+        background: THEME.BACKGROUND.HERO,
         color: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column'

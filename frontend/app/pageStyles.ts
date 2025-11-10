@@ -20,7 +20,7 @@ const styles: Record<string, CSSProperties> = {
     gap: 32
   },
   headerBox: {
-    background: THEME.BACKGROUND.SURFACE_PRIMARY,
+    background: THEME.BACKGROUND.SURFACE_ELEVATED,
     borderRadius: 18,
     padding: '36px 28px',
     margin: '0',
@@ -60,7 +60,7 @@ const styles: Record<string, CSSProperties> = {
     textAlign: 'left',
     fontWeight: 600,
     color: TEXT_PRIMARY,
-    borderBottom: THEME.BORDER.STRONG,
+    borderBottom: THEME.BORDER.MEDIUM,
     backgroundColor: THEME.BACKGROUND.TABLE_HEADER,
     letterSpacing: '0.02em'
   },

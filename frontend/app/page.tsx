@@ -136,7 +136,7 @@ export default function LandingPage() {
               alignItems: 'center',
               gap: '12px',
               background: THEME.BACKGROUND.SURFACE_PRIMARY,
-              border: THEME.BORDER.STRONG,
+            border: THEME.BORDER.MEDIUM,
               borderRadius: '9999px',
               padding: '8px 12px',
               boxShadow: '0 12px 60px rgba(34, 197, 94, 0.25)',
@@ -192,7 +192,7 @@ export default function LandingPage() {
                 onClick={() => handleSuggestion(suggestion)}
                 style={{
                   background: THEME.BACKGROUND.CARD_TINT,
-                  border: THEME.BORDER.SOFT,
+                  border: THEME.BORDER.MEDIUM,
                   color: '#dcfce7',
                   textAlign: 'left',
                   padding: '16px',

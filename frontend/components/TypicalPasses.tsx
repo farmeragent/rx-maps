@@ -301,8 +301,8 @@ export default function TypicalPasses() {
     <section
       style={{
         marginTop: '48px',
-        background: THEME.BACKGROUND.SURFACE_PRIMARY,
-        border: THEME.BORDER.SOFT,
+        background: THEME.BACKGROUND.PANEL,
+        border: THEME.BORDER.MEDIUM,
         borderRadius: '20px',
         padding: '28px',
         boxShadow: THEME.SHADOW.PANEL
@@ -319,7 +319,7 @@ export default function TypicalPasses() {
           }}
           style={{
             background: addingPass ? THEME.BACKGROUND.BUTTON_PILL_HOVER : THEME.BACKGROUND.CARD_TINT,
-            border: THEME.BORDER.STRONG,
+            border: THEME.BORDER.MEDIUM,
             color: '#e9fdf3',
             borderRadius: '999px',
             padding: '10px 18px',
@@ -414,7 +414,7 @@ export default function TypicalPasses() {
               }}
               style={{
                 background: THEME.BACKGROUND.CARD_TINT,
-                border: THEME.BORDER.SOFT,
+                border: THEME.BORDER.MEDIUM,
                 color: '#e4fbf3',
                 borderRadius: '10px',
                 padding: '10px 18px',
@@ -486,9 +486,7 @@ export default function TypicalPasses() {
                 onDragEnd={handleDragEnd}
                 style={{
                   background: THEME.BACKGROUND.PANEL_DEEP,
-                  border: dragOverId === pass.id && draggingId !== pass.id
-                    ? THEME.BORDER.STRONG
-                    : THEME.BORDER.MEDIUM,
+                  border: THEME.BORDER.MEDIUM,
                   boxShadow: draggingId === pass.id ? THEME.SHADOW.LIFT : 'none',
                   opacity: draggingId === pass.id ? 0.7 : 1,
                   borderRadius: '16px',
@@ -541,7 +539,7 @@ export default function TypicalPasses() {
                         onClick={cancelEditing}
                         style={{
                           background: THEME.BACKGROUND.CARD_TINT,
-                          border: THEME.BORDER.SOFT,
+                          border: THEME.BORDER.MEDIUM,
                           color: '#e4fbf3',
                           borderRadius: '10px',
                           padding: '8px 16px',
