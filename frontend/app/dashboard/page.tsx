@@ -6,7 +6,7 @@ import styles from '../pageStyles';
 import { FIELD_NAMES } from '../../constants';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
-import { DEFAULT_CHAT_MESSAGES } from '../../constants/chat';
+import { DEFAULT_CHAT_MESSAGES } from '../../constants';
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning' | 'yield-view' | 'nutrient-capacity-view';
 
 type Phase = 'pre-plant' | 'post-plant';
