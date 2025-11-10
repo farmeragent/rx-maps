@@ -47,6 +47,53 @@ export const COLORS = {
   WHITE: '#ffffff'
 } as const;
 
+export const THEME = {
+  ACCENT: {
+    RGB: '34, 197, 94',
+    TEXT_DARK: '#052e16',
+    TEXT_ACCENT: 'rgba(34, 197, 94, 0.85)',
+    TEXT_MUTED: 'rgba(209, 250, 229, 0.75)',
+    TEXT_SUBTLE: 'rgba(209, 250, 229, 0.65)',
+    PRIMARY_GRADIENT: 'linear-gradient(135deg, #34d399, #059669)'
+  },
+  BACKGROUND: {
+    HERO: 'radial-gradient(circle at top, #1b3b26 0%, #102718 45%, #07140c 100%)',
+    HERO_ALT: 'linear-gradient(180deg, #1c3f2b 0%, #123223 45%, #0c2116 100%)',
+    SURFACE_PRIMARY: 'rgba(8, 47, 23, 0.82)',
+    SURFACE_ELEVATED: 'rgba(7, 26, 15, 0.82)',
+    PANEL: 'rgba(16, 57, 36, 0.82)',
+    PANEL_DEEP: 'rgba(6, 24, 13, 0.85)',
+    INPUT: 'rgba(17, 58, 36, 0.85)',
+    BUTTON_PILL: 'rgba(34,197,94,0.18)',
+    BUTTON_PILL_HOVER: 'rgba(34,197,94,0.28)',
+    CARD_TINT: 'rgba(34,197,94,0.12)',
+    CARD_TINT_HOVER: 'rgba(34,197,94,0.22)',
+    ROW_HOVER: 'rgba(34,197,94,0.1)',
+    ROW_ACTIVE: 'rgba(34,197,94,0.18)',
+    STATUS_POSITIVE: 'rgba(16, 185, 129, 0.15)',
+    STATUS_POSITIVE_BORDER: 'rgba(16, 185, 129, 0.35)',
+    MODAL: 'rgba(8, 28, 17, 0.96)',
+    OVERLAY_DIM: 'rgba(0, 0, 0, 0.5)',
+    TABLE_HEADER: 'rgba(9, 32, 18, 0.92)',
+    PASS_HEADER: 'rgba(34, 197, 94, 0.26)'
+  },
+  BORDER: {
+    SOFT: '1px solid rgba(34,197,94,0.25)',
+    MEDIUM: '1px solid rgba(34,197,94,0.32)',
+    STRONG: '1px solid rgba(34,197,94,0.38)',
+    PILL: '1px solid rgba(34,197,94,0.35)',
+    TABLE_ROW: '1px solid rgba(34,197,94,0.2)',
+    INNER_CARD: '1px solid rgba(34,197,94,0.28)',
+    MODAL: '1px solid rgba(34,197,94,0.32)'
+  },
+  SHADOW: {
+    LIFT: '0 10px 26px rgba(34, 197, 94, 0.35)',
+    LIFT_HOVER: '0 18px 34px rgba(34, 197, 94, 0.45)',
+    PANEL: '0 24px 60px rgba(10, 45, 25, 0.45)',
+    MODAL: '0 24px 60px rgba(7, 26, 15, 0.55)'
+  }
+} as const;
+
 // Field name constants
 export const FIELD_NAMES = {
   NORTH_OF_ROAD: 'North of Road',

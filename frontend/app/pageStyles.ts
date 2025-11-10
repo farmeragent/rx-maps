@@ -1,51 +1,92 @@
-const styles: Record<string, React.CSSProperties> = {
-  appRoot: { minHeight: '100vh', background: 'linear-gradient(135deg,#2d5016,#4a7c59)' },
-  container: { maxWidth: 1400, margin: '0 auto', padding: 20 },
-  headerBox: { 
-    background: 'rgba(255,255,255,0.95)', 
-    borderRadius: 15, 
-    padding: '30px 20px', 
-    margin: '20px 0', 
-    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-    textAlign: 'center' 
+import type { CSSProperties } from 'react';
+import { THEME } from '../constants';
+
+const TEXT_PRIMARY = '#f3f4f6';
+
+const styles: Record<string, CSSProperties> = {
+  appRoot: {
+    minHeight: '100vh',
+    background: THEME.BACKGROUND.HERO,
+    color: TEXT_PRIMARY,
+    display: 'flex',
+    flexDirection: 'column'
   },
-  headerTitle: { margin: '0 0 10px 0', color: '#2c3e50', fontSize: '28px', fontWeight: 600 },
-  headerSub: { margin: 0, color: '#7f8c8d', fontSize: '16px' },
-  contentCard: { background: 'rgba(255,255,255,0.95)', borderRadius: 15, padding: 30, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' },
-  table: { 
-    width: '100%', 
-    borderCollapse: 'collapse',
+  container: {
+    maxWidth: 1400,
+    margin: '0 auto',
+    padding: '48px 32px 64px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 32
+  },
+  headerBox: {
+    background: THEME.BACKGROUND.SURFACE_PRIMARY,
+    borderRadius: 18,
+    padding: '36px 28px',
+    margin: '0',
+    boxShadow: THEME.SHADOW.PANEL,
+    textAlign: 'center',
+    border: THEME.BORDER.MEDIUM,
+    backdropFilter: 'blur(18px)'
+  },
+  headerTitle: {
+    margin: '0 0 10px 0',
+    color: TEXT_PRIMARY,
+    fontSize: '30px',
+    fontWeight: 600,
+    letterSpacing: '0.02em'
+  },
+  headerSub: {
+    margin: 0,
+    color: THEME.ACCENT.TEXT_MUTED,
     fontSize: '16px'
+  },
+  contentCard: {
+    background: THEME.BACKGROUND.SURFACE_ELEVATED,
+    borderRadius: 20,
+    padding: 32,
+    boxShadow: THEME.SHADOW.PANEL,
+    border: THEME.BORDER.MEDIUM,
+    backdropFilter: 'blur(16px)'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '15px',
+    color: TEXT_PRIMARY
   },
   tableTh: {
     padding: '16px 20px',
     textAlign: 'left',
     fontWeight: 600,
-    color: '#2c3e50',
-    borderBottom: '2px solid #4a7c59',
-    backgroundColor: '#f8f9fa'
+    color: TEXT_PRIMARY,
+    borderBottom: THEME.BORDER.STRONG,
+    backgroundColor: THEME.BACKGROUND.TABLE_HEADER,
+    letterSpacing: '0.02em'
   },
   tableTd: {
     padding: '16px 20px',
-    borderBottom: '1px solid #e0e0e0',
-    verticalAlign: 'middle'
+    borderBottom: THEME.BORDER.TABLE_ROW,
+    verticalAlign: 'middle',
+    color: '#def7e9'
   },
   tableTr: {
-    transition: 'background-color 0.2s ease'
+    transition: 'background-color 0.2s ease',
+    backgroundColor: 'transparent'
   },
-  fieldName: { fontWeight: 600, color: '#2c3e50', fontSize: 16 },
-  cropType: { color: '#27ae60', fontWeight: 500, fontSize: 16 },
-  primaryBtn: { 
-    background: 'linear-gradient(135deg,#2d5016,#4a7c59)', 
-    color: '#fff', 
-    border: 'none', 
-    padding: '12px 24px', 
-    borderRadius: 8, 
+  fieldName: { fontWeight: 600, color: TEXT_PRIMARY, fontSize: 16 },
+  cropType: { color: 'rgba(34, 197, 94, 0.68)', fontWeight: 500, fontSize: 16 },
+  primaryBtn: {
+    background: THEME.ACCENT.PRIMARY_GRADIENT,
+    color: THEME.ACCENT.TEXT_DARK,
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: 999,
     cursor: 'pointer',
-    fontWeight: 500,
+    fontWeight: 600,
     fontSize: '14px',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    boxShadow: THEME.SHADOW.LIFT
   }
 };
 

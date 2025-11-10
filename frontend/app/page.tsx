@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { THEME } from '../constants';
 
 const SUGGESTIONS = [
   'What is the average yield target by field?',
@@ -41,7 +42,7 @@ export default function LandingPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(circle at top, #1b3b26 0%, #102718 45%, #07140c 100%)',
+        background: THEME.BACKGROUND.HERO,
         color: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column'
@@ -72,8 +73,8 @@ export default function LandingPage() {
           onClick={goToSettings}
           aria-label="Fertilizer philosophy settings"
           style={{
-            background: 'rgba(34,197,94,0.18)',
-            border: '1px solid rgba(34,197,94,0.35)',
+            background: THEME.BACKGROUND.BUTTON_PILL,
+            border: THEME.BORDER.PILL,
             color: '#dcfce7',
             borderRadius: '9999px',
             padding: '10px 16px',
@@ -84,10 +85,10 @@ export default function LandingPage() {
             transition: 'background 0.2s ease'
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.28)';
+            (e.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.BUTTON_PILL_HOVER;
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.18)';
+            (e.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.BUTTON_PILL;
           }}
         >
           <svg
@@ -134,8 +135,8 @@ export default function LandingPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              background: 'rgba(8, 47, 23, 0.72)',
-              border: '1px solid rgba(74, 222, 128, 0.35)',
+              background: THEME.BACKGROUND.SURFACE_PRIMARY,
+              border: THEME.BORDER.STRONG,
               borderRadius: '9999px',
               padding: '8px 12px',
               boxShadow: '0 12px 60px rgba(34, 197, 94, 0.25)',
@@ -161,15 +162,15 @@ export default function LandingPage() {
               type="submit"
               disabled={isSubmitting || question.trim().length === 0}
               style={{
-                background: 'linear-gradient(135deg, #34d399, #059669)',
+                background: THEME.ACCENT.PRIMARY_GRADIENT,
                 border: 'none',
-                color: '#052e16',
+                color: THEME.ACCENT.TEXT_DARK,
                 fontWeight: 600,
                 borderRadius: '9999px',
                 padding: '12px 24px',
                 cursor: isSubmitting ? 'wait' : 'pointer',
                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                boxShadow: '0 10px 26px rgba(34, 197, 94, 0.35)',
+                boxShadow: THEME.SHADOW.LIFT,
                 opacity: isSubmitting ? 0.7 : 1
               }}
             >
@@ -190,8 +191,8 @@ export default function LandingPage() {
                 key={suggestion}
                 onClick={() => handleSuggestion(suggestion)}
                 style={{
-                  background: 'rgba(34,197,94,0.12)',
-                  border: '1px solid rgba(34,197,94,0.25)',
+                  background: THEME.BACKGROUND.CARD_TINT,
+                  border: THEME.BORDER.SOFT,
                   color: '#dcfce7',
                   textAlign: 'left',
                   padding: '16px',
@@ -200,11 +201,11 @@ export default function LandingPage() {
                   transition: 'background 0.2s ease, transform 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.22)';
+                  (e.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT_HOVER;
                   (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(34,197,94,0.12)';
+                  (e.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT;
                   (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
                 }}
               >
@@ -217,7 +218,7 @@ export default function LandingPage() {
       <footer
         style={{
           padding: '28px 40px',
-          borderTop: '1px solid rgba(34,197,94,0.18)',
+          borderTop: THEME.BORDER.TABLE_ROW,
           display: 'flex',
           justifyContent: 'space-between',
           fontSize: '0.85rem',

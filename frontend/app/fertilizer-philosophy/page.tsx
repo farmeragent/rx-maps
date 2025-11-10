@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TypicalPasses from '../../components/TypicalPasses';
+import { THEME } from '../../constants';
 
 export default function FertilizerPhilosophyPage() {
   const router = useRouter();
@@ -101,7 +102,7 @@ export default function FertilizerPhilosophyPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #102417 0%, #0b1a12 40%, #061009 100%)',
+        background: THEME.BACKGROUND.HERO_ALT,
         color: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column'
@@ -117,9 +118,15 @@ export default function FertilizerPhilosophyPage() {
       >
         <button
           onClick={() => router.push('/')}
+          onMouseEnter={(event) => {
+            (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.BUTTON_PILL_HOVER;
+          }}
+          onMouseLeave={(event) => {
+            (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.BUTTON_PILL;
+          }}
           style={{
-            background: 'rgba(34,197,94,0.18)',
-            border: '1px solid rgba(34,197,94,0.35)',
+            background: THEME.BACKGROUND.BUTTON_PILL,
+            border: THEME.BORDER.PILL,
             color: '#dcfce7',
             borderRadius: '9999px',
             padding: '10px 16px',
@@ -151,13 +158,13 @@ export default function FertilizerPhilosophyPage() {
           <h2 style={{ fontSize: '2.5rem', marginBottom: '12px', color: '#f9fafb' }}>
             Define how you think about fertility.
           </h2>
-          <p style={{ color: 'rgba(209, 250, 229, 0.78)', fontSize: '1.05rem', maxWidth: '640px' }}>
+          <p style={{ color: THEME.ACCENT.TEXT_MUTED, fontSize: '1.05rem', maxWidth: '640px' }}>
             Capture your high-level goals and guiding principles. These notes inform recommendations across your maps and reports.
           </p>
         </section>
 
         {isLoading && (
-          <div style={{ marginBottom: '24px', color: 'rgba(209, 213, 219, 0.65)' }}>
+          <div style={{ marginBottom: '24px', color: THEME.ACCENT.TEXT_SUBTLE }}>
             Loading saved philosophy…
           </div>
         )}
@@ -168,10 +175,11 @@ export default function FertilizerPhilosophyPage() {
             style={{
               marginBottom: '20px',
               padding: '14px 16px',
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
+              background: THEME.BACKGROUND.STATUS_POSITIVE,
+              border: THEME.BACKGROUND.STATUS_POSITIVE_BORDER,
               borderRadius: '12px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              color: '#ddf6ea'
             }}
           >
             {statusMessage}
@@ -203,14 +211,14 @@ export default function FertilizerPhilosophyPage() {
         >
           <div
             style={{
-              background: 'rgba(22, 101, 52, 0.18)',
-              border: '1px solid rgba(34, 197, 94, 0.35)',
+              background: THEME.BACKGROUND.PANEL,
+              border: THEME.BORDER.MEDIUM,
               borderRadius: '18px',
               padding: '24px'
             }}
           >
             <h3 style={{ fontSize: '1.1rem', color: '#d1fae5', marginBottom: '12px' }}>Yield philosophy</h3>
-            <p style={{ color: 'rgba(209, 250, 229, 0.78)', marginBottom: '14px' }}>
+            <p style={{ color: THEME.ACCENT.TEXT_MUTED, marginBottom: '14px' }}>
               How do you set your target yields? Capture goals, constraints, and how you adjust them over time.
             </p>
             <textarea
@@ -225,8 +233,8 @@ export default function FertilizerPhilosophyPage() {
               rows={8}
               style={{
                 width: '100%',
-                background: 'rgba(6, 24, 13, 0.78)',
-                border: '1px solid rgba(74, 222, 128, 0.28)',
+                background: THEME.BACKGROUND.PANEL_DEEP,
+                border: THEME.BORDER.INNER_CARD,
                 borderRadius: '14px',
                 color: '#f9fafb',
                 padding: '14px',
@@ -239,14 +247,14 @@ export default function FertilizerPhilosophyPage() {
 
           <div
             style={{
-              background: 'rgba(21, 128, 61, 0.16)',
-              border: '1px solid rgba(74, 222, 128, 0.32)',
+              background: THEME.BACKGROUND.PANEL,
+              border: THEME.BORDER.MEDIUM,
               borderRadius: '18px',
               padding: '24px'
             }}
           >
             <h3 style={{ fontSize: '1.1rem', color: '#dbeafe', marginBottom: '12px' }}>Nutrient philosophy</h3>
-            <p style={{ color: 'rgba(209, 250, 229, 0.78)', marginBottom: '14px' }}>
+            <p style={{ color: THEME.ACCENT.TEXT_MUTED, marginBottom: '14px' }}>
               Describe how you approach nutrient applications, balancing agronomy, economics, and stewardship.
             </p>
             <textarea
@@ -261,8 +269,8 @@ export default function FertilizerPhilosophyPage() {
               rows={8}
               style={{
                 width: '100%',
-                background: 'rgba(6, 24, 13, 0.78)',
-                border: '1px solid rgba(74, 222, 128, 0.28)',
+                background: THEME.BACKGROUND.PANEL_DEEP,
+                border: THEME.BORDER.INNER_CARD,
                 borderRadius: '14px',
                 color: '#f9fafb',
                 padding: '14px',

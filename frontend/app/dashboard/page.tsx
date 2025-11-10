@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../pageStyles';
-import { FIELD_NAMES } from '../../constants';
+import { FIELD_NAMES, THEME } from '../../constants';
 import ChatSidebar from '../../components/ChatSidebar';
 import { usePersistentChat } from '../../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES } from '../../constants';
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             <h2 style={styles.headerTitle}>Field Management Dashboard</h2>
             <p style={styles.headerSub}>Select a field to create a fertilization plan</p>
             {dynamicQuestion && (
-              <p style={{ ...styles.headerSub, marginTop: '12px', fontStyle: 'italic', color: '#4a7c59' }}>
+              <p style={{ ...styles.headerSub, marginTop: '12px', fontStyle: 'italic', color: THEME.ACCENT.TEXT_ACCENT }}>
                 Assistant query: {dynamicQuestion}
               </p>
             )}
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                         style={{
                           ...styles.tableTr,
                           cursor: 'pointer',
-                          backgroundColor: isExpanded ? '#e8f5e9' : 'transparent'
+                          backgroundColor: isExpanded ? THEME.BACKGROUND.ROW_ACTIVE : 'transparent'
                         }} 
                         onClick={(e) => {
                           if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('label')) {
@@ -307,7 +307,7 @@ export default function DashboardPage() {
                           setExpandedRow(isExpanded ? null : name);
                         }}
                         onMouseEnter={(e) => {
-                          if (!isExpanded) e.currentTarget.style.backgroundColor = '#f8f9fa';
+                          if (!isExpanded) e.currentTarget.style.backgroundColor = THEME.BACKGROUND.ROW_HOVER;
                         }} 
                         onMouseLeave={(e) => {
                           if (!isExpanded) e.currentTarget.style.backgroundColor = 'transparent';
@@ -316,7 +316,7 @@ export default function DashboardPage() {
                       <td style={{...styles.tableTd, textAlign: 'center', width: '40px', padding: '12px'}}>
                         <span style={{ 
                           fontSize: '14px', 
-                          color: '#4a7c59',
+                          color: THEME.ACCENT.TEXT_ACCENT,
                           transition: 'transform 0.2s ease',
                           display: 'inline-block',
                           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                               {allPasses.length === 0 ? (
                                 <span style={{
                                   fontSize: '14px',
-                                  color: '#7f8c8d',
+                                  color: THEME.ACCENT.TEXT_MUTED,
                                   fontStyle: 'italic'
                                 }}>
                                   No passes
@@ -358,11 +358,11 @@ export default function DashboardPage() {
                                     onClick={() => setSelectedPass(pass)}
                                     onMouseEnter={(e) => { 
                                       e.currentTarget.style.transform = 'translateY(-1px)'; 
-                                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; 
+                                      e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT_HOVER; 
                                     }} 
                                     onMouseLeave={(e) => { 
                                       e.currentTarget.style.transform = 'translateY(0)'; 
-                                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; 
+                                      e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT; 
                                     }}
                                   >
                                     {pass.passNumber}
@@ -372,7 +372,20 @@ export default function DashboardPage() {
                             </div>
                           </td>
                           <td style={styles.tableTd}>
-                            <button style={styles.primaryBtn} onClick={() => createPlan(name)} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}>View Rx</button>
+                            <button
+                              style={styles.primaryBtn}
+                              onClick={() => createPlan(name)}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT_HOVER;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT;
+                              }}
+                            >
+                              View Rx
+                            </button>
                           </td>
                           <td style={styles.tableTd}>
                             ${costs.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -387,8 +400,14 @@ export default function DashboardPage() {
                                 padding: '8px 16px',
                                 fontSize: '12px'
                               }}
-                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'; }} 
-                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'; }}
+                              onMouseEnter={(e) => { 
+                                e.currentTarget.style.transform = 'translateY(-1px)'; 
+                                e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT_HOVER; 
+                              }} 
+                              onMouseLeave={(e) => { 
+                                e.currentTarget.style.transform = 'translateY(0)'; 
+                                e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT; 
+                              }}
                             >
                               Send
                             </button>
@@ -412,31 +431,31 @@ export default function DashboardPage() {
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={7 + dynamicColumns.length} style={{ padding: 0, backgroundColor: '#f8f9fa', borderTop: '2px solid #4a7c59' }}>
-                          <div style={{ padding: '20px', backgroundColor: '#f8f9fa' }}>
-                            <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50', fontSize: '18px' }}>Pass Breakdown for {name}</h3>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
+                        <td colSpan={7 + dynamicColumns.length} style={{ padding: 0, backgroundColor: THEME.BACKGROUND.SURFACE_ELEVATED, borderTop: THEME.BORDER.MEDIUM }}>
+                          <div style={{ padding: '24px', backgroundColor: THEME.BACKGROUND.SURFACE_ELEVATED }}>
+                            <h3 style={{ margin: '0 0 18px 0', color: '#f9fafb', fontSize: '18px', letterSpacing: '0.01em' }}>Pass Breakdown for {name}</h3>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: THEME.BACKGROUND.PANEL_DEEP, borderRadius: '14px', overflow: 'hidden', border: THEME.BORDER.INNER_CARD, boxShadow: THEME.SHADOW.PANEL }}>
                               <thead>
-                                <tr style={{ backgroundColor: '#4a7c59', color: '#fff' }}>
-                                  <th style={{ ...styles.tableTh, backgroundColor: '#4a7c59', color: '#fff', textAlign: 'left', padding: '12px 16px' }}>Pass</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: '#4a7c59', color: '#fff', textAlign: 'left', padding: '12px 16px' }}>Machine</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: '#4a7c59', color: '#fff', textAlign: 'left', padding: '12px 16px' }}>Nutrients</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: '#4a7c59', color: '#fff', textAlign: 'right', padding: '12px 16px' }}>Total Cost</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: '#4a7c59', color: '#fff', textAlign: 'right', padding: '12px 16px' }}>Cost per acre</th>
+                                <tr style={{ backgroundColor: THEME.BACKGROUND.PASS_HEADER, color: '#f9fafb' }}>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Pass</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Machine</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Nutrients</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Total Cost</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Cost per acre</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {allPasses.map((pass) => {
                                   const passCost = fieldPassCosts[pass.passNumber] || { total: 25000, perAcre: 50 };
                                   return (
-                                    <tr key={pass.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                                      <td style={{ ...styles.tableTd, fontWeight: 600, color: '#2c3e50' }}>Pass {pass.passNumber}</td>
+                                    <tr key={pass.id} style={{ borderBottom: THEME.BORDER.INNER_CARD }}>
+                                      <td style={{ ...styles.tableTd, fontWeight: 600, color: '#f9fafb' }}>Pass {pass.passNumber}</td>
                                       <td style={styles.tableTd}>{pass.machine}</td>
                                       <td style={styles.tableTd}>{pass.nutrientTypes}</td>
-                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: '#2d5016' }}>
+                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_ACCENT }}>
                                         ${passCost.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                       </td>
-                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: '#2d5016' }}>
+                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_ACCENT }}>
                                         ${passCost.perAcre.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </td>
                                     </tr>
@@ -485,7 +504,7 @@ export default function DashboardPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: THEME.BACKGROUND.OVERLAY_DIM,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -495,13 +514,14 @@ export default function DashboardPage() {
         >
           <div 
             style={{
-              background: 'white',
-              borderRadius: '15px',
-              padding: '30px',
-              maxWidth: '400px',
+              background: THEME.BACKGROUND.MODAL,
+              borderRadius: '18px',
+              padding: '32px',
+              maxWidth: '420px',
               width: '90%',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-              position: 'relative'
+              boxShadow: THEME.SHADOW.MODAL,
+              position: 'relative',
+              border: THEME.BORDER.MODAL
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -515,7 +535,7 @@ export default function DashboardPage() {
                 border: 'none',
                 fontSize: '24px',
                 cursor: 'pointer',
-                color: '#7f8c8d',
+                color: THEME.ACCENT.TEXT_MUTED,
                 width: '30px',
                 height: '30px',
                 display: 'flex',
@@ -525,7 +545,7 @@ export default function DashboardPage() {
                 transition: 'background 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f0f0f0';
+                e.currentTarget.style.background = THEME.BACKGROUND.CARD_TINT;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -535,7 +555,7 @@ export default function DashboardPage() {
             </button>
             <h3 style={{
               margin: '0 0 20px 0',
-              color: '#2c3e50',
+              color: '#f9fafb',
               fontSize: '24px',
               fontWeight: 600
             }}>
@@ -548,7 +568,7 @@ export default function DashboardPage() {
             }}>
               <div>
                 <span style={{
-                  color: '#7f8c8d',
+                  color: THEME.ACCENT.TEXT_MUTED,
                   fontSize: '14px',
                   fontWeight: 500,
                   display: 'block',
@@ -557,7 +577,7 @@ export default function DashboardPage() {
                   Nutrient Types:
                 </span>
                 <span style={{
-                  color: '#2c3e50',
+                  color: '#f9fafb',
                   fontSize: '16px',
                   fontWeight: 400
                 }}>
@@ -566,7 +586,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span style={{
-                  color: '#7f8c8d',
+                  color: THEME.ACCENT.TEXT_MUTED,
                   fontSize: '14px',
                   fontWeight: 500,
                   display: 'block',
@@ -575,7 +595,7 @@ export default function DashboardPage() {
                   VR RX:
                 </span>
                 <span style={{
-                  color: '#2c3e50',
+                  color: '#f9fafb',
                   fontSize: '16px',
                   fontWeight: 400
                 }}>
@@ -584,7 +604,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span style={{
-                  color: '#7f8c8d',
+                  color: THEME.ACCENT.TEXT_MUTED,
                   fontSize: '14px',
                   fontWeight: 500,
                   display: 'block',
@@ -593,7 +613,7 @@ export default function DashboardPage() {
                   Machine:
                 </span>
                 <span style={{
-                  color: '#2c3e50',
+                  color: '#f9fafb',
                   fontSize: '16px',
                   fontWeight: 400
                 }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { THEME } from '../constants';
 
 type Phase = 'pre-plant' | 'post-plant';
 
@@ -300,11 +301,11 @@ export default function TypicalPasses() {
     <section
       style={{
         marginTop: '48px',
-        background: 'rgba(6, 24, 13, 0.6)',
-        border: '1px solid rgba(74, 222, 128, 0.25)',
+        background: THEME.BACKGROUND.SURFACE_PRIMARY,
+        border: THEME.BORDER.SOFT,
         borderRadius: '20px',
         padding: '28px',
-        boxShadow: '0 24px 60px rgba(22, 101, 52, 0.25)'
+        boxShadow: THEME.SHADOW.PANEL
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '12px' }}>
@@ -317,9 +318,9 @@ export default function TypicalPasses() {
             setError(null);
           }}
           style={{
-            background: addingPass ? 'rgba(74, 222, 128, 0.35)' : 'rgba(34, 197, 94, 0.22)',
-            border: '1px solid rgba(34, 197, 94, 0.4)',
-            color: '#dcfce7',
+            background: addingPass ? THEME.BACKGROUND.BUTTON_PILL_HOVER : THEME.BACKGROUND.CARD_TINT,
+            border: THEME.BORDER.STRONG,
+            color: '#e9fdf3',
             borderRadius: '999px',
             padding: '10px 18px',
             cursor: 'pointer',
@@ -338,8 +339,8 @@ export default function TypicalPasses() {
         <div
           style={{
             marginTop: '22px',
-            background: 'rgba(6, 24, 13, 0.85)',
-            border: '1px solid rgba(34, 197, 94, 0.32)',
+            background: THEME.BACKGROUND.PANEL_DEEP,
+            border: THEME.BORDER.MEDIUM,
             borderRadius: '16px',
             padding: '20px',
             display: 'grid',
@@ -347,14 +348,14 @@ export default function TypicalPasses() {
           }}
         >
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            <label style={{ color: '#bbf7d0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ color: '#e4fbf3', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               Stage
               <select
                 value={newPassStage}
                 onChange={(event) => setNewPassStage(event.target.value as Phase)}
                 style={{
-                  background: 'rgba(12, 39, 22, 0.9)',
-                  border: '1px solid rgba(34, 197, 94, 0.28)',
+                  background: THEME.BACKGROUND.INPUT,
+                  border: THEME.BORDER.INNER_CARD,
                   borderRadius: '10px',
                   color: '#f9fafb',
                   padding: '10px'
@@ -364,15 +365,15 @@ export default function TypicalPasses() {
                 <option value="post-plant">Closer to post-plant</option>
               </select>
             </label>
-            <label style={{ color: '#bbf7d0', flex: '1 1 220px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ color: '#e4fbf3', flex: '1 1 220px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               Equipment / machine
               <input
                 value={newPassMachine}
                 onChange={(event) => setNewPassMachine(event.target.value)}
                 placeholder="e.g. 600R Spreader"
                 style={{
-                  background: 'rgba(12, 39, 22, 0.9)',
-                  border: '1px solid rgba(34, 197, 94, 0.28)',
+                  background: THEME.BACKGROUND.INPUT,
+                  border: THEME.BORDER.INNER_CARD,
                   borderRadius: '10px',
                   color: '#f9fafb',
                   padding: '10px'
@@ -380,22 +381,22 @@ export default function TypicalPasses() {
               />
             </label>
           </div>
-          <label style={{ color: '#bbf7d0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ color: '#e4fbf3', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             Nutrient mix
             <input
               value={newPassNutrients}
               onChange={(event) => setNewPassNutrients(event.target.value)}
               placeholder="DAP + Zinc"
               style={{
-                background: 'rgba(12, 39, 22, 0.9)',
-                border: '1px solid rgba(34, 197, 94, 0.28)',
+                background: THEME.BACKGROUND.INPUT,
+                border: THEME.BORDER.INNER_CARD,
                 borderRadius: '10px',
                 color: '#f9fafb',
                 padding: '10px'
               }}
             />
           </label>
-          <label style={{ color: '#bbf7d0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ color: '#e4fbf3', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <input
               type="checkbox"
               checked={newPassVr}
@@ -412,12 +413,21 @@ export default function TypicalPasses() {
                 setNewPassVr(false);
               }}
               style={{
-                background: 'rgba(34, 197, 94, 0.12)',
-                border: '1px solid rgba(34, 197, 94, 0.25)',
-                color: '#bbf7d0',
+                background: THEME.BACKGROUND.CARD_TINT,
+                border: THEME.BORDER.SOFT,
+                color: '#e4fbf3',
                 borderRadius: '10px',
                 padding: '10px 18px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'background 0.2s ease, box-shadow 0.2s ease'
+              }}
+              onMouseEnter={(event) => {
+                (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT_HOVER;
+                (event.currentTarget as HTMLButtonElement).style.boxShadow = THEME.SHADOW.LIFT;
+              }}
+              onMouseLeave={(event) => {
+                (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT;
+                (event.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
               }}
             >
               Cancel
@@ -426,13 +436,23 @@ export default function TypicalPasses() {
               onClick={handleCreate}
               disabled={isSaving}
               style={{
-                background: 'linear-gradient(135deg, #34d399, #059669)',
+                background: THEME.ACCENT.PRIMARY_GRADIENT,
                 border: 'none',
-                color: '#052e16',
+                color: THEME.ACCENT.TEXT_DARK,
                 borderRadius: '10px',
                 padding: '10px 22px',
                 cursor: isSaving ? 'wait' : 'pointer',
-                fontWeight: 600
+                fontWeight: 600,
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: THEME.SHADOW.LIFT
+              }}
+              onMouseEnter={(event) => {
+                (event.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+                (event.currentTarget as HTMLButtonElement).style.boxShadow = THEME.SHADOW.LIFT_HOVER;
+              }}
+              onMouseLeave={(event) => {
+                (event.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                (event.currentTarget as HTMLButtonElement).style.boxShadow = THEME.SHADOW.LIFT;
               }}
             >
               {isSaving ? 'Saving…' : 'Save pass'}
@@ -442,11 +462,11 @@ export default function TypicalPasses() {
       )}
 
       {isLoading && !addingPass && (
-        <div style={{ marginTop: '24px', color: 'rgba(209, 250, 229, 0.75)' }}>Loading typical passes…</div>
+        <div style={{ marginTop: '24px', color: THEME.ACCENT.TEXT_MUTED }}>Loading typical passes…</div>
       )}
 
       {!isLoading && combinedPasses.length === 0 && !addingPass && (
-        <div style={{ marginTop: '24px', color: 'rgba(209, 250, 229, 0.7)' }}>
+        <div style={{ marginTop: '24px', color: THEME.ACCENT.TEXT_SUBTLE }}>
           You haven’t saved any passes yet. Create the first one to outline your fertility workflow.
         </div>
       )}
@@ -465,11 +485,11 @@ export default function TypicalPasses() {
                 onDrop={(event) => handleDrop(event, pass.id)}
                 onDragEnd={handleDragEnd}
                 style={{
-                  background: 'rgba(6, 24, 13, 0.9)',
+                  background: THEME.BACKGROUND.PANEL_DEEP,
                   border: dragOverId === pass.id && draggingId !== pass.id
-                    ? '1px solid rgba(74, 222, 128, 0.65)'
-                    : '1px solid rgba(34, 197, 94, 0.32)',
-                  boxShadow: draggingId === pass.id ? '0 0 18px rgba(34, 197, 94, 0.35)' : 'none',
+                    ? THEME.BORDER.STRONG
+                    : THEME.BORDER.MEDIUM,
+                  boxShadow: draggingId === pass.id ? THEME.SHADOW.LIFT : 'none',
                   opacity: draggingId === pass.id ? 0.7 : 1,
                   borderRadius: '16px',
                   padding: '18px 20px',
@@ -482,9 +502,9 @@ export default function TypicalPasses() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                     <span style={{
-                      background: 'rgba(34, 197, 94, 0.22)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      color: '#bbf7d0',
+                      background: THEME.BACKGROUND.CARD_TINT_HOVER,
+                      border: THEME.BORDER.MEDIUM,
+                      color: '#e4fbf3',
                       borderRadius: '999px',
                       padding: '6px 14px',
                       fontSize: '0.95rem'
@@ -497,12 +517,21 @@ export default function TypicalPasses() {
                       onClick={() => (isEditing ? handleSave(pass) : beginEditing(pass))}
                       disabled={isSaving && isEditing}
                       style={{
-                        background: isEditing ? 'linear-gradient(135deg, #34d399, #059669)' : 'rgba(34, 197, 94, 0.18)',
-                        border: '1px solid rgba(34, 197, 94, 0.32)',
-                        color: '#dcfce7',
+                        background: isEditing ? THEME.ACCENT.PRIMARY_GRADIENT : THEME.BACKGROUND.BUTTON_PILL,
+                        border: THEME.BORDER.MEDIUM,
+                        color: isEditing ? THEME.ACCENT.TEXT_DARK : '#e9fdf3',
                         borderRadius: '10px',
                         padding: '8px 16px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                      }}
+                      onMouseEnter={(event) => {
+                        (event.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+                        (event.currentTarget as HTMLButtonElement).style.boxShadow = THEME.SHADOW.LIFT_HOVER;
+                      }}
+                      onMouseLeave={(event) => {
+                        (event.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                        (event.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
                       }}
                     >
                       {isEditing ? (isSaving ? 'Saving…' : 'Save') : 'Edit'}
@@ -511,12 +540,21 @@ export default function TypicalPasses() {
                       <button
                         onClick={cancelEditing}
                         style={{
-                          background: 'rgba(34, 197, 94, 0.1)',
-                          border: '1px solid rgba(34, 197, 94, 0.25)',
-                          color: '#bbf7d0',
+                          background: THEME.BACKGROUND.CARD_TINT,
+                          border: THEME.BORDER.SOFT,
+                          color: '#e4fbf3',
                           borderRadius: '10px',
                           padding: '8px 16px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease, box-shadow 0.2s ease'
+                        }}
+                        onMouseEnter={(event) => {
+                          (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT_HOVER;
+                          (event.currentTarget as HTMLButtonElement).style.boxShadow = THEME.SHADOW.LIFT;
+                        }}
+                        onMouseLeave={(event) => {
+                          (event.currentTarget as HTMLButtonElement).style.background = THEME.BACKGROUND.CARD_TINT;
+                          (event.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
                         }}
                       >
                         Cancel
@@ -541,30 +579,30 @@ export default function TypicalPasses() {
                 </div>
 
                 <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                  <label style={{ color: '#bbf7d0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ color: '#e4fbf3', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     Equipment / machine
                     <input
                       disabled={!isEditing}
                       value={isEditing ? editForm.machine ?? '' : pass.machine}
                       onChange={(event) => setEditForm((prev) => ({ ...prev, machine: event.target.value }))}
                       style={{
-                        background: 'rgba(12, 39, 22, 0.9)',
-                        border: '1px solid rgba(34, 197, 94, 0.28)',
+                        background: THEME.BACKGROUND.INPUT,
+                        border: THEME.BORDER.INNER_CARD,
                         borderRadius: '10px',
                         color: '#f9fafb',
                         padding: '10px'
                       }}
                     />
                   </label>
-                  <label style={{ color: '#bbf7d0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ color: '#e4fbf3', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     Nutrient mix
                     <input
                       disabled={!isEditing}
                       value={isEditing ? editForm.nutrientTypes ?? '' : pass.nutrientTypes}
                       onChange={(event) => setEditForm((prev) => ({ ...prev, nutrientTypes: event.target.value }))}
                       style={{
-                        background: 'rgba(12, 39, 22, 0.9)',
-                        border: '1px solid rgba(34, 197, 94, 0.28)',
+                        background: THEME.BACKGROUND.INPUT,
+                        border: THEME.BORDER.INNER_CARD,
                         borderRadius: '10px',
                         color: '#f9fafb',
                         padding: '10px'
@@ -573,7 +611,7 @@ export default function TypicalPasses() {
                   </label>
                 </div>
 
-                <label style={{ color: '#bbf7d0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label style={{ color: '#e4fbf3', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <input
                     type="checkbox"
                     disabled={!isEditing}
