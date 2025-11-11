@@ -109,6 +109,12 @@ export default function DashboardPage() {
   const [allPasses, setAllPasses] = useState<PassTile[]>([]);
   const [selectedPass, setSelectedPass] = useState<PassTile | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [sendModalField, setSendModalField] = useState<string | null>(null);
+  const closeSendModal = () => {
+    setIsSendModalOpen(false);
+    setSendModalField(null);
+  };
   
   const [passCosts] = useState<Record<string, Record<string, { total: number; perAcre: number }>>>(() => {
     const passCostsMap: Record<string, Record<string, { total: number; perAcre: number }>> = {};
@@ -407,6 +413,10 @@ export default function DashboardPage() {
                                 e.currentTarget.style.transform = 'translateY(0)'; 
                                 e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT; 
                               }}
+                              onClick={() => {
+                                setSendModalField(name);
+                                setIsSendModalOpen(true);
+                              }}
                             >
                               Send
                             </button>
@@ -494,6 +504,104 @@ export default function DashboardPage() {
       )}
 
       {/* MapView removed */}
+
+      {isSendModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: THEME.BACKGROUND.OVERLAY_DIM,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={closeSendModal}
+        >
+          <div
+            style={{
+              background: THEME.BACKGROUND.MODAL,
+              borderRadius: '18px',
+              padding: '32px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: THEME.SHADOW.MODAL,
+              position: 'relative',
+              border: THEME.BORDER.MODAL,
+              color: '#f9fafb'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeSendModal}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'transparent',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: THEME.ACCENT.TEXT_MUTED,
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'background 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = THEME.BACKGROUND.CARD_TINT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              ×
+            </button>
+
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '22px', fontWeight: 600 }}>
+              Destination machine not configured!
+            </h3>
+
+            <p style={{ margin: '0 0 24px 0', fontSize: '15px', lineHeight: 1.6 }}>
+              This feature is still in development. We’ll let you know when map delivery to
+              machines is ready.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                style={{
+                  ...styles.primaryBtn,
+                  padding: '10px 18px',
+                  fontSize: '13px'
+                }}
+                onClick={closeSendModal}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT_HOVER;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = THEME.SHADOW.LIFT;
+                }}
+              >
+                Got it
+              </button>
+            </div>
+
+            {sendModalField && (
+              <p style={{ marginTop: '16px', fontSize: '13px', color: THEME.ACCENT.TEXT_MUTED }}>
+                Field: {sendModalField}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {selectedPass && (
         <div 
