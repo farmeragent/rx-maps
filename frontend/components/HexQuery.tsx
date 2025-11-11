@@ -474,44 +474,7 @@ export default function HexQuery() {
           setIsLoading(false);
         }
 
-        const prescriptionData = await prescriptionResponse.json();
-        setIsLoading(false);
-
-        // Store prescription maps and select first layer
-        if (prescriptionData.prescription_maps && prescriptionData.prescription_maps.length > 0) {
-          setPrescriptionMaps(prescriptionData.prescription_maps);
-          setSelectedPrescriptionLayer(prescriptionData.prescription_maps[0].pass);
-          setHighlightedHexes(new Set());
-          setCurrentView('map'); // Show map for prescription
-          setHasShownMap(true); // Mark that we've shown the map at least once
-          setIsFullWidth(false); // Switch to sidebar mode
-          setVisibleFieldNames(new Set([targetFieldName]));
-          setCenterField(targetFieldName); // Center map on this field
-        }
-
-        setLastPrescriptionField(targetFieldName);
-        setPendingAllFieldsPrompt(false);
-
-        // Add success message
-        const passCount = prescriptionData.prescription_maps?.length || 0;
-        addBotMessage(
-          `✓ Created ${passCount} prescription passes for ${prescriptionData.summary?.field_name || 'the field'}:\n` +
-            prescriptionData.prescription_maps
-              .map(
-                (pm: any) =>
-                  `• ${pm.pass}: ${pm.geojson.features[0].properties.rate} ${pm.geojson.features[0].properties.unit}`
-              )
-              .join('\n')
-        );
-
-        addBotMessage('Would you like me to create prescription maps for all fields as well?', {
-          actions: [
-            { label: 'Yes, include all fields', value: 'generate_all_prescriptions', variant: 'primary' },
-            { label: 'No, just this field', value: 'skip_generate_all', variant: 'secondary' }
-          ],
-          actionId: 'all-fields-prompt'
-        });
-        setPendingAllFieldsPrompt(true);
+        return;
       } else {
         // Normal query flow
         setIsLoading(false);
