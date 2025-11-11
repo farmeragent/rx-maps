@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
 import { THEME } from '../constants';
 
-const TEXT_PRIMARY = '#f3f4f6';
+const TEXT_PRIMARY = '#111827';
+const TEXT_SECONDARY = '#334155';
 
 const styles: Record<string, CSSProperties> = {
   appRoot: {
@@ -38,7 +39,7 @@ const styles: Record<string, CSSProperties> = {
   },
   headerSub: {
     margin: 0,
-    color: THEME.ACCENT.TEXT_MUTED,
+    color: TEXT_SECONDARY,
     fontSize: '16px'
   },
   contentCard: {
@@ -68,14 +69,14 @@ const styles: Record<string, CSSProperties> = {
     padding: '16px 20px',
     borderBottom: THEME.BORDER.TABLE_ROW,
     verticalAlign: 'middle',
-    color: '#def7e9'
+    color: TEXT_SECONDARY
   },
   tableTr: {
     transition: 'background-color 0.2s ease',
     backgroundColor: 'transparent'
   },
   fieldName: { fontWeight: 600, color: TEXT_PRIMARY, fontSize: 16 },
-  cropType: { color: 'rgba(34, 197, 94, 0.68)', fontWeight: 500, fontSize: 16 },
+  cropType: { color: '#0f5132', fontWeight: 500, fontSize: 16 },
   primaryBtn: {
     background: THEME.ACCENT.PRIMARY_GRADIENT,
     color: THEME.ACCENT.TEXT_DARK,

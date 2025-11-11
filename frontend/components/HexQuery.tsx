@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChatSidebar, { ChatMessageAction } from './ChatSidebar';
 import HexMapView from './HexMapView';
 import { usePersistentChat } from '../hooks/usePersistentChat';
-import { DEFAULT_CHAT_MESSAGES } from '../constants';
+import { DEFAULT_CHAT_MESSAGES, FIELD_NAMES } from '../constants';
 
 interface QueryResult {
   question: string;
@@ -138,51 +138,220 @@ export default function HexQuery() {
     void handleSubmit(initialQuestion, { skipAddingUserMessage });
   }, [initialQuestion, isChatHydrated, messages, handleSubmit]);
 
-  const addUserMessage = (text: string) => {
-    setMessages(prev => [...prev, { type: 'user', text }]);
-  };
-
-  const addBotMessage = (
-    text: string,
-    options?: {
-      sql?: string;
-      metadata?: string;
-      tableData?: any[];
-      columnMetadata?: Record<string, { display_name: string; unit?: string }>;
-      actions?: ChatMessageAction[];
-      actionId?: string;
+  const resolveFieldName = useCallback((value: string) => {
+    if (!value) {
+      return value;
     }
-  ) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        type: 'bot',
-        text,
-        sql: options?.sql,
-        metadata: options?.metadata,
-        tableData: options?.tableData,
-        columnMetadata: options?.columnMetadata,
-        actions: options?.actions,
-        actionId: options?.actionId
+    const match = Object.values(FIELD_NAMES).find(
+      name => name.toLowerCase() === value.toLowerCase()
+    );
+    return match || value;
+  }, []);
+
+  const prescriptionFieldParam = searchParams?.get('prescriptionField');
+  const requestedPrescriptionField = useMemo(
+    () => (prescriptionFieldParam ? resolveFieldName(prescriptionFieldParam) : null),
+    [prescriptionFieldParam, resolveFieldName]
+  );
+
+  const addUserMessage = useCallback(
+    (text: string) => {
+      setMessages(prev => [...prev, { type: 'user', text }]);
+    },
+    [setMessages]
+  );
+
+  const addBotMessage = useCallback(
+    (
+      text: string,
+      options?: {
+        sql?: string;
+        metadata?: string;
+        tableData?: any[];
+        columnMetadata?: Record<string, { display_name: string; unit?: string }>;
+        actions?: ChatMessageAction[];
+        actionId?: string;
       }
-    ]);
-  };
+    ) => {
+      setMessages(prev => [
+        ...prev,
+        {
+          type: 'bot',
+          text,
+          sql: options?.sql,
+          metadata: options?.metadata,
+          tableData: options?.tableData,
+          columnMetadata: options?.columnMetadata,
+          actions: options?.actions,
+          actionId: options?.actionId
+        }
+      ]);
+    },
+    [setMessages]
+  );
 
-  const addErrorMessage = (error: string) => {
-    setMessages(prev => [...prev, { type: 'error', text: error }]);
-  };
+  const addErrorMessage = useCallback(
+    (error: string) => {
+      setMessages(prev => [...prev, { type: 'error', text: error }]);
+    },
+    [setMessages]
+  );
 
-  const clearActionsById = (actionId?: string) => {
-    if (!actionId) {
+  const clearActionsById = useCallback(
+    (actionId?: string) => {
+      if (!actionId) {
+        return;
+      }
+
+      setMessages(prev =>
+        prev.map(message =>
+          message.actionId === actionId ? { ...message, actions: undefined } : message
+        )
+      );
+    },
+    [setMessages]
+  );
+
+  const applyPrescriptionData = useCallback(
+    (requestedFieldName: string, data: any) => {
+      const passes = Array.isArray(data?.prescription_maps) ? data.prescription_maps : [];
+      setPrescriptionMaps(passes);
+      setSelectedPrescriptionLayer(
+        passes.length > 0 ? passes[0]?.pass ?? null : null
+      );
+      setHighlightedHexes(new Set());
+      const resolvedField = resolveFieldName(
+        data?.summary?.field_name || requestedFieldName
+      );
+      setVisibleFieldNames(new Set([resolvedField]));
+      setCenterField(resolvedField);
+      setCurrentView('map');
+      setHasShownMap(true);
+      setIsFullWidth(false);
+      setLastPrescriptionField(resolvedField);
+      setPendingAllFieldsPrompt(false);
+    },
+    [
+      resolveFieldName,
+      setHasShownMap,
+      setIsFullWidth,
+      setLastPrescriptionField,
+      setPendingAllFieldsPrompt,
+      setPrescriptionMaps,
+      setSelectedPrescriptionLayer,
+      setHighlightedHexes,
+      setVisibleFieldNames,
+      setCurrentView,
+      setCenterField
+    ]
+  );
+
+  const isNavigationPrescription = Boolean(requestedPrescriptionField);
+
+  useEffect(() => {
+    if (!requestedPrescriptionField) {
       return;
     }
 
-    setMessages(prev =>
-      prev.map(message =>
-        message.actionId === actionId ? { ...message, actions: undefined } : message
-      )
-    );
-  };
+    const controller = new AbortController();
+
+    const loadPrescription = async () => {
+      setIsLoading(true);
+      clearActionsById('all-fields-prompt');
+
+      try {
+        const response = await fetch('/api/prescription-map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field_name: requestedPrescriptionField }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.detail || payload.error || 'Failed to create prescription map');
+        }
+
+        const data = await response.json();
+        applyPrescriptionData(requestedPrescriptionField, data);
+
+        const passes: any[] = Array.isArray(data?.prescription_maps)
+          ? data.prescription_maps
+          : [];
+        const passCount = passes.length;
+        const summaryField = resolveFieldName(
+          data?.summary?.field_name || requestedPrescriptionField
+        );
+
+        if (passCount > 0) {
+          if (!isNavigationPrescription) {
+            const passLines = passes
+              .map((pm: any) => {
+                const feature = pm?.geojson?.features?.[0];
+                const rate = feature?.properties?.rate;
+                const unit = feature?.properties?.unit;
+                const rateText =
+                  rate === null || rate === undefined
+                    ? 'No rate provided'
+                    : unit
+                      ? `${rate} ${unit}`
+                      : `${rate}`;
+                return `• ${pm.pass}: ${rateText}`;
+              })
+              .join('\n');
+
+            addBotMessage(
+              `✓ Created ${passCount} prescription passes for ${summaryField}:\n${passLines}`
+            );
+
+            addBotMessage('Would you like me to create prescription maps for all fields as well?', {
+              actions: [
+                { label: 'Yes, include all fields', value: 'generate_all_prescriptions', variant: 'primary' },
+                { label: 'No, just this field', value: 'skip_generate_all', variant: 'secondary' }
+              ],
+              actionId: 'all-fields-prompt'
+            });
+            setPendingAllFieldsPrompt(true);
+          } else {
+            setPendingAllFieldsPrompt(false);
+          }
+        } else if (!isNavigationPrescription) {
+          addBotMessage(`No prescription passes were returned for ${summaryField}.`);
+        }
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        console.error('Failed to load prescription maps for field:', error);
+        if (!isNavigationPrescription) {
+          addErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'Failed to load prescription map. Please try again.'
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadPrescription();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    requestedPrescriptionField,
+    applyPrescriptionData,
+    addBotMessage,
+    addErrorMessage,
+    clearActionsById,
+    resolveFieldName,
+    setPendingAllFieldsPrompt,
+    isNavigationPrescription
+  ]);
 
   const determineVisibleFields = (result: QueryResult) => {
     const fieldNames = new Set<string>();
@@ -239,16 +408,70 @@ export default function HexQuery() {
       if (result.intent === 'prescription_map') {
         addBotMessage(result.summary);
 
-        // Call prescription map API
-        const targetFieldName = result.field_name || 'North of Road';
-        const prescriptionResponse = await fetch('/api/prescription-map', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ field_name: targetFieldName })
-        });
+        try {
+          const targetFieldName = resolveFieldName(result.field_name || 'North of Road');
+          const prescriptionResponse = await fetch('/api/prescription-map', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field_name: targetFieldName })
+          });
 
-        if (!prescriptionResponse.ok) {
-          throw new Error('Failed to create prescription map');
+          const prescriptionData = await prescriptionResponse.json();
+
+          if (!prescriptionResponse.ok) {
+            throw new Error(
+              prescriptionData?.detail ||
+                prescriptionData?.error ||
+                'Failed to create prescription map'
+            );
+          }
+
+          applyPrescriptionData(targetFieldName, prescriptionData);
+
+          const passes: any[] = Array.isArray(prescriptionData.prescription_maps)
+            ? prescriptionData.prescription_maps
+            : [];
+          const passCount = passes.length;
+          const summaryField = resolveFieldName(
+            prescriptionData.summary?.field_name || targetFieldName
+          );
+
+          if (passCount > 0) {
+            const passLines = passes
+              .map((pm: any) => {
+                const feature = pm?.geojson?.features?.[0];
+                const rate = feature?.properties?.rate;
+                const unit = feature?.properties?.unit;
+                const rateText =
+                  rate === null || rate === undefined
+                    ? 'No rate provided'
+                    : unit
+                      ? `${rate} ${unit}`
+                      : `${rate}`;
+                return `• ${pm.pass}: ${rateText}`;
+              })
+              .join('\n');
+
+            addBotMessage(
+              `✓ Created ${passCount} prescription passes for ${summaryField}:\n${passLines}`
+            );
+
+            addBotMessage(
+              'Would you like me to create prescription maps for all fields as well?',
+              {
+                actions: [
+                  { label: 'Yes, include all fields', value: 'generate_all_prescriptions', variant: 'primary' },
+                  { label: 'No, just this field', value: 'skip_generate_all', variant: 'secondary' }
+                ],
+                actionId: 'all-fields-prompt'
+              }
+            );
+            setPendingAllFieldsPrompt(true);
+          } else {
+            addBotMessage(`No prescription passes were returned for ${summaryField}.`);
+          }
+        } finally {
+          setIsLoading(false);
         }
 
         const prescriptionData = await prescriptionResponse.json();

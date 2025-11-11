@@ -149,8 +149,7 @@ export default function DashboardPage() {
   }, [page, nutrientCurrent, nutrientNeeded]);
 
   function createPlan(field: string) {
-    setCurrentField(field);
-    setPage('yield');
+    router.push(`/hex-query?prescriptionField=${encodeURIComponent(field)}`);
   }
 
   function goBack() {

@@ -56,6 +56,7 @@ export const THEME = {
     TEXT_ACCENT: `rgba(${ACCENT_RGB}, 0.85)`,
     TEXT_MUTED: 'rgba(209, 250, 229, 0.75)',
     TEXT_SUBTLE: 'rgba(209, 250, 229, 0.65)',
+
     // Button gradient 
     PRIMARY_GRADIENT: 'linear-gradient(135deg,rgb(229, 219, 167),rgb(240, 213, 157))'
   },
