@@ -152,7 +152,7 @@ export default function LandingPage() {
                 flex: 1,
                 background: 'transparent',
                 border: 'none',
-                color: '#f9fafb',
+                color: '#000000',
                 fontSize: '1.05rem',
                 padding: '12px 4px',
                 outline: 'none'
@@ -227,8 +227,7 @@ export default function LandingPage() {
       >
         <div>Built for agronomists and farmers who want instant insight.</div>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <span onClick={goToDashboard} style={{ cursor: 'pointer', color: '#4ade80' }}>Open dashboard</span>
-          <span onClick={goToSettings} style={{ cursor: 'pointer', color: '#4ade80' }}>Fertilizer philosophy</span>
+          <span onClick={goToDashboard} style={{ cursor: 'pointer', color: '#4ade80' }}>Field Dashboard</span>
         </div>
       </footer>
     </div>

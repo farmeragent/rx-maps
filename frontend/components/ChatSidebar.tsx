@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { THEME } from '../constants';
 
 export type ChatActionVariant = 'primary' | 'secondary' | 'link';
 
@@ -49,6 +50,11 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const accent = THEME.ACCENT;
+  const background = THEME.BACKGROUND;
+  const border = THEME.BORDER;
+  const shadow = THEME.SHADOW;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -99,6 +105,7 @@ export default function ChatSidebar({
       </header>
 
       <div className="chat-sidebar__messages">
+        <div className={`chat-sidebar__messages-inner ${isFullWidth ? 'chat-sidebar__messages-inner--centered' : ''}`}>
         {messages.map((message, index) => {
           const roleClass =
             message.type === 'user'
@@ -218,6 +225,7 @@ export default function ChatSidebar({
           </div>
         )}
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       <form
@@ -229,18 +237,22 @@ export default function ChatSidebar({
           }
         }}
       >
-        <textarea
-          ref={inputRef}
-          value={inputValue}
-          onChange={(event) => onInputChange(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your field data..."
-          className="chat-sidebar__input"
-          rows={2}
-        />
-        <button type="submit" className="chat-sidebar__send" disabled={!canSend}>
-          Send
-        </button>
+        <div className="chat-sidebar__composer-inner">
+          <div className="chat-sidebar__input-wrapper">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(event) => onInputChange(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask a question about your field data..."
+              className="chat-sidebar__input"
+              rows={2}
+            />
+            <button type="submit" className="chat-sidebar__send" disabled={!canSend}>
+              Send
+            </button>
+          </div>
+        </div>
       </form>
 
       <style jsx>{`
@@ -249,8 +261,8 @@ export default function ChatSidebar({
           height: 100vh;
           display: flex;
           flex-direction: column;
-          background: white;
-          border-right: 1px solid #e5e7eb;
+          background: ${background.SURFACE_PRIMARY};
+          border-right: ${border.TABLE_ROW};
           transition: width 0.3s ease;
         }
 
@@ -261,27 +273,13 @@ export default function ChatSidebar({
 
         .chat-sidebar__header {
           padding: 20px;
-          border-bottom: 1px solid #e5e7eb;
-          background: #f9fafb;
-        }
-
-        .chat-sidebar--full-width .chat-sidebar__header {
-          max-width: 900px;
-          margin: 0 auto;
-          width: 100%;
-        }
-
-        .chat-sidebar__title {
-          margin: 0 0 4px 0;
-          font-size: 20px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .chat-sidebar__subtitle {
-          margin: 0;
-          font-size: 14px;
-          color: #6b7280;
+          border-bottom: ${border.TABLE_ROW};
+          background: ${background.SURFACE_ELEVATED};
+          color: ${accent.TEXT_DARK};
+          box-shadow: ${shadow.LIFT};
+          position: sticky;
+          top: 0;
+          z-index: 2;
         }
 
         .chat-sidebar__actions {
@@ -290,31 +288,45 @@ export default function ChatSidebar({
           margin-top: 12px;
         }
 
+        .chat-sidebar__title {
+          margin: 0 0 4px 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: ${accent.TEXT_DARK};
+        }
+
+        .chat-sidebar__subtitle {
+          margin: 0;
+          font-size: 14px;
+          color: ${accent.TEXT_MUTED};
+        }
+
         .chat-sidebar__action-btn {
           padding: 6px 12px;
-          background: #f3f4f6;
-          color: #374151;
-          border: none;
-          border-radius: 6px;
+          background: ${background.BUTTON_PILL};
+          color: ${accent.TEXT_DARK};
+          border: ${border.PILL};
+          border-radius: 999px;
           cursor: pointer;
           font-size: 12px;
           text-decoration: none;
-          transition: background 0.2s;
+          transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+          box-shadow: ${shadow.LIFT};
         }
 
         .chat-sidebar__action-btn:hover {
-          background: #e5e7eb;
+          background: ${background.BUTTON_PILL_HOVER};
         }
 
         .chat-sidebar__action-btn--danger {
-          background: #fee2e2;
-          color: #991b1b;
+          background: rgba(248, 113, 113, 0.18);
+          color: #7f1d1d;
+          border-color: rgba(248, 113, 113, 0.35);
         }
 
         .chat-sidebar__action-btn--danger:hover {
-          background: #fecaca;
+          background: rgba(248, 113, 113, 0.28);
         }
-
         .chat-sidebar__messages {
           flex: 1;
           overflow-y: auto;
@@ -322,33 +334,46 @@ export default function ChatSidebar({
           display: flex;
           flex-direction: column;
           gap: 16px;
+          background: transparent;
         }
 
         .chat-sidebar--full-width .chat-sidebar__messages {
-          max-width: 900px;
-          margin: 0 auto;
           width: 100%;
+          display: flex;
+          justify-content: center;
+        }
+
+        .chat-sidebar__messages-inner {
+          width: 100%;
+          max-width: 900px;
+          display: flex;
+          flex-direction: column;
+          gap: inherit;
+          margin: 0 auto;
         }
 
         .chat-sidebar__bubble {
           padding: 12px 16px;
           border-radius: 12px;
           max-width: 85%;
+          border: ${border.TABLE_ROW};
+          box-shadow: ${shadow.PANEL};
         }
 
         .chat-sidebar--full-width .chat-sidebar__bubble {
-          max-width: 800px;
+          max-width: 100%;
         }
 
         .chat-sidebar__bubble--user {
-          background: #3b82f6;
-          color: white;
+          background: ${accent.PRIMARY_GRADIENT};
+          color: ${accent.TEXT_DARK};
           align-self: flex-end;
+          border-color: transparent;
         }
 
         .chat-sidebar__bubble--assistant {
-          background: #f3f4f6;
-          color: #1f2937;
+          background: ${background.SURFACE_ELEVATED};
+          color: ${accent.TEXT_DARK};
           align-self: flex-start;
         }
 
@@ -367,7 +392,7 @@ export default function ChatSidebar({
         .chat-sidebar__dot {
           width: 8px;
           height: 8px;
-          background: #9ca3af;
+          background: ${accent.TEXT_MUTED};
           border-radius: 50%;
           animation: bounce 1.4s infinite ease-in-out both;
         }
@@ -391,7 +416,7 @@ export default function ChatSidebar({
 
         .chat-sidebar__meta {
           font-size: 11px;
-          color: #6b7280;
+          color: ${accent.TEXT_SUBTLE};
           margin-top: 4px;
         }
 
@@ -402,8 +427,8 @@ export default function ChatSidebar({
         .chat-sidebar__sql-summary {
           cursor: pointer;
           padding: 6px 8px;
-          background: #374151;
-          color: #9ca3af;
+          background: rgba(15, 23, 42, 0.85);
+          color: rgba(224, 242, 254, 0.92);
           border-radius: 4px;
           font-size: 11px;
           font-weight: 600;
@@ -415,7 +440,7 @@ export default function ChatSidebar({
         }
 
         .chat-sidebar__sql-summary:hover {
-          background: #4b5563;
+          background: rgba(30, 41, 59, 0.9);
         }
 
         .chat-sidebar__sql-arrow {
@@ -431,8 +456,8 @@ export default function ChatSidebar({
         .chat-sidebar__sql-code {
           margin-top: 6px;
           padding: 8px;
-          background: #1f2937;
-          color: #10b981;
+          background: rgba(15, 23, 42, 0.95);
+          color: rgba(56, 189, 248, 0.9);
           border-radius: 4px;
           font-family: monospace;
           font-size: 11px;
@@ -448,8 +473,8 @@ export default function ChatSidebar({
         .chat-sidebar__table-summary {
           cursor: pointer;
           padding: 6px 8px;
-          background: #3b82f6;
-          color: white;
+          background: ${accent.PRIMARY_GRADIENT};
+          color: ${accent.TEXT_DARK};
           border-radius: 4px;
           font-size: 11px;
           font-weight: 600;
@@ -461,7 +486,7 @@ export default function ChatSidebar({
         }
 
         .chat-sidebar__table-summary:hover {
-          background: #2563eb;
+          background: rgba(241, 196, 15, 0.85);
         }
 
         .chat-sidebar__table-arrow {
@@ -480,7 +505,7 @@ export default function ChatSidebar({
           max-height: 300px;
           overflow-y: auto;
           border-radius: 4px;
-          background: white;
+          background: rgba(255, 255, 255, 0.94);
         }
 
         .chat-sidebar__table {
@@ -490,7 +515,7 @@ export default function ChatSidebar({
         }
 
         .chat-sidebar__table thead {
-          background: #f3f4f6;
+          background: ${background.SURFACE_ELEVATED};
           position: sticky;
           top: 0;
         }
@@ -499,8 +524,8 @@ export default function ChatSidebar({
           padding: 6px 8px;
           text-align: left;
           font-weight: 600;
-          color: #374151;
-          border-bottom: 2px solid #e5e7eb;
+          color: ${accent.TEXT_DARK};
+          border-bottom: ${border.TABLE_ROW};
         }
 
         .chat-sidebar__table-header {
@@ -524,12 +549,12 @@ export default function ChatSidebar({
 
         .chat-sidebar__table td {
           padding: 6px 8px;
-          border-bottom: 1px solid #e5e7eb;
-          color: #1f2937;
+          border-bottom: ${border.TABLE_ROW};
+          color: ${accent.TEXT_DARK};
         }
 
         .chat-sidebar__table tbody tr:hover {
-          background: #f9fafb;
+          background: ${background.CARD_TINT};
         }
 
         .chat-sidebar__table tbody tr:last-child td {
@@ -539,7 +564,7 @@ export default function ChatSidebar({
         .chat-sidebar__field-link {
           background: none;
           border: none;
-          color: #2563eb;
+          color: rgba(${accent.RGB}, 0.85);
           text-decoration: underline;
           cursor: pointer;
           padding: 0;
@@ -548,7 +573,7 @@ export default function ChatSidebar({
         }
 
         .chat-sidebar__field-link:hover {
-          color: #1d4ed8;
+          color: rgba(${accent.RGB}, 1);
         }
 
         .chat-sidebar__inline-actions {
@@ -569,81 +594,105 @@ export default function ChatSidebar({
         }
 
         .chat-sidebar__inline-action-btn--primary {
-          background: #2563eb;
-          color: white;
+          background: ${accent.PRIMARY_GRADIENT};
+          color: ${accent.TEXT_DARK};
         }
 
         .chat-sidebar__inline-action-btn--primary:hover {
-          background: #1d4ed8;
+          background: rgba(${accent.RGB}, 0.85);
         }
 
         .chat-sidebar__inline-action-btn--secondary {
-          background: #f3f4f6;
-          color: #1f2937;
+          background: ${background.CARD_TINT};
+          color: ${accent.TEXT_DARK};
+          border-color: ${border.MEDIUM.split(' ')[2] ? border.MEDIUM.split(' ')[2] : 'transparent'};
         }
 
         .chat-sidebar__inline-action-btn--secondary:hover {
-          background: #e5e7eb;
+          background: ${background.CARD_TINT_HOVER};
         }
 
         .chat-sidebar__inline-action-btn--link {
           background: transparent;
-          color: #2563eb;
-          border-color: #2563eb;
+          color: rgba(${accent.RGB}, 0.85);
+          border-color: rgba(${accent.RGB}, 0.35);
         }
 
         .chat-sidebar__inline-action-btn--link:hover {
-          background: rgba(37, 99, 235, 0.1);
+          background: rgba(${accent.RGB}, 0.1);
         }
 
         .chat-sidebar__composer {
           padding: 20px;
-          border-top: 1px solid #e5e7eb;
+          border-top: ${border.TABLE_ROW};
           display: flex;
-          gap: 8px;
-          background: white;
+          justify-content: center;
+          background: ${background.SURFACE_PRIMARY};
         }
 
-        .chat-sidebar--full-width .chat-sidebar__composer {
-          max-width: 900px;
-          margin: 0 auto;
+        .chat-sidebar__composer-inner {
           width: 100%;
+          max-width: 900px;
+          display: flex;
+        }
+
+        .chat-sidebar__input-wrapper {
+          flex: 1;
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          border-radius: 24px;
+          border: ${border.MEDIUM};
+          padding: 10px 12px 10px 16px;
+          background: ${background.SURFACE_ELEVATED};
+          box-shadow: ${shadow.PANEL};
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .chat-sidebar__input-wrapper:focus-within {
+          border-color: rgba(${accent.RGB}, 0.6);
+          box-shadow: ${shadow.PANEL}, 0 0 0 2px rgba(${accent.RGB}, 0.12);
         }
 
         .chat-sidebar__input {
           flex: 1;
-          padding: 12px 16px;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 14px;
-          outline: none;
-          font-family: inherit;
+          border: none;
+          background: transparent;
+          color: ${accent.TEXT_DARK};
+          font-size: 15px;
+          line-height: 1.6;
           resize: none;
-        }
-
-        .chat-sidebar__input:focus {
-          border-color: #3b82f6;
+          max-height: 120px;
+          min-height: 36px;
+          padding: 0;
+          outline: none;
         }
 
         .chat-sidebar__send {
-          padding: 12px 24px;
-          background: #3b82f6;
-          color: white;
+          padding: 10px 20px;
+          background: ${accent.PRIMARY_GRADIENT};
+          color: ${accent.TEXT_DARK};
           border: none;
-          border-radius: 8px;
+          border-radius: 999px;
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
-          transition: background 0.2s;
+          transition: background 0.2s ease, transform 0.2s ease;
+          box-shadow: ${shadow.PANEL};
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .chat-sidebar__send:hover:not(:disabled) {
-          background: #2563eb;
+          background: rgba(${accent.RGB}, 0.85);
+          transform: translateY(-1px);
         }
 
         .chat-sidebar__send:disabled {
-          background: #9ca3af;
+          background: rgba(${accent.RGB}, 0.25);
           cursor: not-allowed;
+          transform: none;
         }
       `}</style>
     </div>

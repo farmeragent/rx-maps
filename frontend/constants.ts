@@ -57,7 +57,7 @@ export const THEME = {
     TEXT_MUTED: 'rgba(209, 250, 229, 0.75)',
     TEXT_SUBTLE: 'rgba(209, 250, 229, 0.65)',
     // Button gradient 
-    PRIMARY_GRADIENT: 'linear-gradient(135deg,rgb(205, 192, 129),rgb(193, 206, 94))'
+    PRIMARY_GRADIENT: 'linear-gradient(135deg,rgb(229, 219, 167),rgb(240, 213, 157))'
   },
   BACKGROUND: {
     HERO: 'radial-gradient(circle at top,rgb(133, 202, 163) 0%,rgb(104, 157, 123) 45%,rgb(58, 87, 69) 100%)',
@@ -94,8 +94,8 @@ export const THEME = {
     MODAL: `1px solid rgba(${ACCENT_RGB}, 0.32)`
   },
   SHADOW: {
-    // LIFT: `0 10px 26px rgba(${ACCENT_RGB}, 0.35)`,
-    // LIFT_HOVER: `0 18px 34px rgba(${ACCENT_RGB}, 0.45)`,
+    LIFT: `0 10px 26px rgba(${ACCENT_RGB}, 0.35)`,
+    LIFT_HOVER: `0 18px 34px rgba(${ACCENT_RGB}, 0.45)`,
     PANEL: '0 24px 60px rgba(10, 45, 25, 0.45)',
     MODAL: '0 24px 60px rgba(7, 26, 15, 0.55)'
   }
