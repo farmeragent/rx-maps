@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { THEME } from '../constants';
 
 const SUGGESTIONS = [
-  'What is the average yield target by field?',
-  'Where should I apply more nitrogen this week?',
-  'Show fields with low phosphorus levels.',
-  'How did South of Road perform last season?'
+  'Where should I apply lime in railroad pivot?',
+  'What is the yield goal by field?',
+  'Which acres were most off their yield goal?'
 ];
 
 export default function LandingPage() {
