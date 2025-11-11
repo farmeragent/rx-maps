@@ -1,3 +1,4 @@
+import { SUBRESOURCE_INTEGRITY_MANIFEST } from 'next/dist/shared/lib/constants';
 import type { ChatMessage } from './components/ChatSidebar';
 
 export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
@@ -60,18 +61,28 @@ export const THEME = {
     // Button gradient 
     PRIMARY_GRADIENT: 'linear-gradient(135deg,rgb(229, 219, 167),rgb(240, 213, 157))'
   },
+  TEXT: {
+    DARK: '#000000',
+    LIGHT: '#ffffff',
+  },
   BACKGROUND: {
     HERO: 'radial-gradient(circle at top,rgb(133, 202, 163) 0%,rgb(104, 157, 123) 45%,rgb(58, 87, 69) 100%)',
     
     // Landing page input 
-    SURFACE_PRIMARY: 'rgba(251, 255, 252, 0.82)',
+    SURFACE_PRIMARY: 'rgb(255, 255, 255)',
+    // SURFACE_PRIMARY: 'rgba(251, 255, 252, 0.82)',
 
     // Table background & title container
     SURFACE_ELEVATED: 'rgba(158, 211, 180, 0.82)',
     
     // Fertilizer Philosophy 
     PANEL: 'rgba(16, 57, 36, 0.82)',
-    PANEL_DEEP: 'rgba(6, 24, 13, 0.85)',
+    PANEL_DEEP: 'rgba(16, 57, 36, 0.82)',
+    
+
+    // Table 
+    PANEL_LIGHT: '#ffffff',
+
 
     INPUT: 'rgba(17, 58, 36, 0.85)',
     BUTTON_PILL: `rgba(${ACCENT_RGB}, 0.18)`,
@@ -93,11 +104,11 @@ export const THEME = {
     TABLE_ROW: `1px solid rgba(${ACCENT_RGB}, 0.2)`,
     INNER_CARD: `1px solid rgba(${ACCENT_RGB}, 0.28)`,
     MODAL: `1px solid rgba(${ACCENT_RGB}, 0.32)`
-  },
+  },  
   SHADOW: {
-    LIFT: `0 10px 26px rgba(${ACCENT_RGB}, 0.35)`,
+    LIFT: `0 10px 20px rgba(${ACCENT_RGB}, 0.35)`,
     LIFT_HOVER: `0 18px 34px rgba(${ACCENT_RGB}, 0.45)`,
-    PANEL: '0 24px 60px rgba(10, 45, 25, 0.45)',
+    PANEL: '0 10px 40px rgba(10, 45, 25, 0.25)',
     MODAL: '0 24px 60px rgba(7, 26, 15, 0.55)'
   }
 } as const;

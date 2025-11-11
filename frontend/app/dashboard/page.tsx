@@ -442,15 +442,15 @@ export default function DashboardPage() {
                       <tr>
                         <td colSpan={7 + dynamicColumns.length} style={{ padding: 0, backgroundColor: THEME.BACKGROUND.SURFACE_ELEVATED, borderTop: THEME.BORDER.MEDIUM }}>
                           <div style={{ padding: '24px', backgroundColor: THEME.BACKGROUND.SURFACE_ELEVATED }}>
-                            <h3 style={{ margin: '0 0 18px 0', color: '#f9fafb', fontSize: '18px', letterSpacing: '0.01em' }}>Pass Breakdown for {name}</h3>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: THEME.BACKGROUND.PANEL_DEEP, borderRadius: '14px', overflow: 'hidden', border: THEME.BORDER.INNER_CARD, boxShadow: THEME.SHADOW.PANEL }}>
+                            <h3 style={{ margin: '0 0 18px 0', color: THEME.ACCENT.TEXT_DARK, fontSize: '18px', letterSpacing: '0.01em' }}>Pass Breakdown for {name}</h3>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: THEME.BACKGROUND.PANEL_LIGHT, borderRadius: '14px', overflow: 'hidden', border: THEME.BORDER.INNER_CARD, boxShadow: THEME.SHADOW.PANEL }}>
                               <thead>
-                                <tr style={{ backgroundColor: THEME.BACKGROUND.PASS_HEADER, color: '#f9fafb' }}>
-                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Pass</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Machine</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Nutrients</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Total Cost</th>
-                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: '#f9fafb', textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Cost per acre</th>
+                                <tr style={{ backgroundColor: THEME.BACKGROUND.PASS_HEADER, color: THEME.ACCENT.TEXT_DARK }}>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: THEME.ACCENT.TEXT_DARK, textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Pass</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: THEME.ACCENT.TEXT_DARK, textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Machine</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: THEME.ACCENT.TEXT_DARK, textAlign: 'left', padding: '12px 16px', borderBottom: 'none' }}>Nutrients</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: THEME.ACCENT.TEXT_DARK, textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Total Cost</th>
+                                  <th style={{ ...styles.tableTh, backgroundColor: 'transparent', color: THEME.ACCENT.TEXT_DARK, textAlign: 'right', padding: '12px 16px', borderBottom: 'none' }}>Cost per acre</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -458,13 +458,13 @@ export default function DashboardPage() {
                                   const passCost = fieldPassCosts[pass.passNumber] || { total: 25000, perAcre: 50 };
                                   return (
                                     <tr key={pass.id} style={{ borderBottom: THEME.BORDER.INNER_CARD }}>
-                                      <td style={{ ...styles.tableTd, fontWeight: 600, color: '#f9fafb' }}>Pass {pass.passNumber}</td>
+                                      <td style={{ ...styles.tableTd, fontWeight: 600, color: THEME.ACCENT.TEXT_DARK }}>Pass {pass.passNumber}</td>
                                       <td style={styles.tableTd}>{pass.machine}</td>
                                       <td style={styles.tableTd}>{pass.nutrientTypes}</td>
-                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_ACCENT }}>
+                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_DARK }}>
                                         ${passCost.total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                       </td>
-                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_ACCENT }}>
+                                      <td style={{ ...styles.tableTd, textAlign: 'right', fontWeight: 600, color: THEME.ACCENT.TEXT_DARK }}>
                                         ${passCost.perAcre.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </td>
                                     </tr>
@@ -531,7 +531,7 @@ export default function DashboardPage() {
               boxShadow: THEME.SHADOW.MODAL,
               position: 'relative',
               border: THEME.BORDER.MODAL,
-              color: '#f9fafb'
+              color: THEME.ACCENT.TEXT_DARK
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -564,11 +564,11 @@ export default function DashboardPage() {
               ×
             </button>
 
-            <h3 style={{ margin: '0 0 12px 0', fontSize: '22px', fontWeight: 600 }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '22px', color: THEME.ACCENT.TEXT_MUTED, fontWeight: 600 }}>
               Destination machine not configured!
             </h3>
 
-            <p style={{ margin: '0 0 24px 0', fontSize: '15px', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 24px 0', fontSize: '15px', color: THEME.ACCENT.TEXT_MUTED, lineHeight: 1.6 }}>
               This feature is still in development. We’ll let you know when map delivery to
               machines is ready.
             </p>
@@ -662,7 +662,7 @@ export default function DashboardPage() {
             </button>
             <h3 style={{
               margin: '0 0 20px 0',
-              color: '#f9fafb',
+              color: THEME.TEXT.LIGHT,
               fontSize: '24px',
               fontWeight: 600
             }}>
@@ -684,7 +684,7 @@ export default function DashboardPage() {
                   Nutrient Types:
                 </span>
                 <span style={{
-                  color: '#f9fafb',
+                  color: THEME.TEXT.LIGHT,
                   fontSize: '16px',
                   fontWeight: 400
                 }}>
@@ -702,7 +702,7 @@ export default function DashboardPage() {
                   VR RX:
                 </span>
                 <span style={{
-                  color: '#f9fafb',
+                  color: THEME.TEXT.LIGHT,
                   fontSize: '16px',
                   fontWeight: 400
                 }}>
@@ -720,7 +720,7 @@ export default function DashboardPage() {
                   Machine:
                 </span>
                 <span style={{
-                  color: '#f9fafb',
+                  color: THEME.TEXT.LIGHT,
                   fontSize: '16px',
                   fontWeight: 400
                 }}>

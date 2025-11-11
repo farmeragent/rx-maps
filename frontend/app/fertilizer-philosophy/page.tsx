@@ -139,9 +139,6 @@ export default function FertilizerPhilosophyPage() {
           <span style={{ fontSize: '16px' }}>←</span>
           Back to assistant
         </button>
-        <h1 style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Fertilizer Philosophy
-        </h1>
         <div />
       </header>
 
@@ -217,7 +214,7 @@ export default function FertilizerPhilosophyPage() {
               padding: '24px'
             }}
           >
-            <h3 style={{ fontSize: '1.1rem', color: '#d1fae5', marginBottom: '12px' }}>Yield philosophy</h3>
+            <h3 style={{ fontSize: '1.1rem', color: THEME.ACCENT.TEXT_MUTED, marginBottom: '12px' }}>Yield philosophy</h3>
             <p style={{ color: THEME.ACCENT.TEXT_MUTED, marginBottom: '14px' }}>
               How do you set your target yields? Capture goals, constraints, and how you adjust them over time.
             </p>
@@ -233,10 +230,10 @@ export default function FertilizerPhilosophyPage() {
               rows={8}
               style={{
                 width: '100%',
-                background: THEME.BACKGROUND.PANEL_DEEP,
+                // background: THEME.BACKGROUND.PANEL_DEEP,
                 border: THEME.BORDER.INNER_CARD,
-                borderRadius: '14px',
-                color: '#f9fafb',
+                borderRadius: '14px', 
+                color: THEME.TEXT.DARK,
                 padding: '14px',
                 fontSize: '1rem',
                 resize: 'vertical',
@@ -253,7 +250,7 @@ export default function FertilizerPhilosophyPage() {
               padding: '24px'
             }}
           >
-            <h3 style={{ fontSize: '1.1rem', color: '#dbeafe', marginBottom: '12px' }}>Nutrient philosophy</h3>
+            <h3 style={{ fontSize: '1.1rem', color: THEME.ACCENT.TEXT_MUTED, marginBottom: '12px' }}>Nutrient philosophy</h3>
             <p style={{ color: THEME.ACCENT.TEXT_MUTED, marginBottom: '14px' }}>
               Describe how you approach nutrient applications, balancing agronomy, economics, and stewardship.
             </p>
@@ -269,10 +266,10 @@ export default function FertilizerPhilosophyPage() {
               rows={8}
               style={{
                 width: '100%',
-                background: THEME.BACKGROUND.PANEL_DEEP,
+                // background: THEME.BACKGROUND.PANEL_DEEP,
                 border: THEME.BORDER.INNER_CARD,
                 borderRadius: '14px',
-                color: '#f9fafb',
+                color: THEME.TEXT.DARK,
                 padding: '14px',
                 fontSize: '1rem',
                 resize: 'vertical',
