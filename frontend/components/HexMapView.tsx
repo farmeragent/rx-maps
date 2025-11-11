@@ -1,5 +1,8 @@
 'use client';
 
+// IMPORTANT: Import patch FIRST before any deck.gl code loads
+import '../lib/luma-gl-patch';
+
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -41,6 +44,7 @@ export default function HexMapView({
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    console.log('[HexMapView] Component mounting, setting mounted=true');
     setMounted(true);
   }, []);
 
@@ -132,14 +136,17 @@ export default function HexMapView({
   // Create layers with deck.gl
   useEffect(() => {
     if (!mounted || !geoJsonData || typeof window === 'undefined') {
+      console.log('[HexMapView] Skipping layer creation:', { mounted, hasGeoJsonData: !!geoJsonData, isWindow: typeof window !== 'undefined' });
       setLayersState([]);
       return;
     }
 
+    console.log('[HexMapView] Starting layer creation');
     Promise.all([
       import('@deck.gl/layers').then(mod => mod.GeoJsonLayer),
       import('@deck.gl/layers').then(mod => mod.PolygonLayer)
     ]).then(([GeoJsonLayer, PolygonLayer]) => {
+      console.log('[HexMapView] Deck.gl layers imported successfully');
       const layers: any[] = [];
 
       const getBaseColor = (feature: any) => {
@@ -260,9 +267,10 @@ export default function HexMapView({
         layers.push(highlightedLayer);
       }
 
+      console.log('[HexMapView] Setting layers, count:', layers.length);
       setLayersState(layers);
     }).catch((error) => {
-      console.error('Failed to load deck.gl layers:', error);
+      console.error('[HexMapView] Failed to load deck.gl layers:', error);
       setLayersState([]);
     });
   }, [mounted, geoJsonData, highlightedHexes, hoveredHex, prescriptionMaps, selectedPrescriptionLayer, viewState.zoom]);
@@ -323,6 +331,7 @@ export default function HexMapView({
     <div className="hex-map-view">
       {mounted && DeckGL && Map && (
         <>
+          {console.log('[HexMapView] Rendering DeckGL component with', layersState.length, 'layers')}
           {/* Prescription Map Layer Controls */}
           {prescriptionMaps.length > 0 && (
             <div className="hex-map-view__prescription-controls">
@@ -363,6 +372,8 @@ export default function HexMapView({
             controller={true}
             layers={layersState}
             onHover={handleHover}
+            onError={(error: any) => console.error('[HexMapView] DeckGL error:', error)}
+            onWebGLInitialized={(gl: any) => console.log('[HexMapView] WebGL initialized successfully')}
             style={{ width: '100%', height: '100%' }}
             getCursor={({ isDragging }: any) => (isDragging ? 'grabbing' : 'grab')}
           >
