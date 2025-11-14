@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './ChatSidebar.module.css';
 
@@ -50,6 +50,11 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -101,7 +106,7 @@ export default function ChatSidebar({
 
       <div className={styles.messages}>
         <div className={styles.messagesInner}>
-        {messages.map((message, index) => {
+        {isClient && messages.map((message, index) => {
           const roleClass =
             message.type === 'user'
               ? styles.bubbleUser
@@ -111,15 +116,15 @@ export default function ChatSidebar({
 
           return (
             <div key={index} className={`${styles.bubble} ${roleClass}`}>
-              <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
+              <div style={{ whiteSpace: 'pre-wrap' }} suppressHydrationWarning>{message.text}</div>
               {message.metadata && (
-                <div className={styles.meta}>{message.metadata}</div>
+                <div className={styles.meta} suppressHydrationWarning>{message.metadata}</div>
               )}
               {Array.isArray(message.tableData) && message.tableData.length > 0 && (() => {
                 const tableData = message.tableData;
                 return (
                   <details className={styles.tableDetails} open>
-                    <summary className={styles.tableSummary}>
+                    <summary className={styles.tableSummary} suppressHydrationWarning>
                       <span className={styles.tableArrow}>▶</span>
                       Table Results ({tableData.length} rows)
                     </summary>
@@ -155,7 +160,7 @@ export default function ChatSidebar({
 
                                 if (column === 'field_name') {
                                   return (
-                                    <td key={column}>
+                                    <td key={column} suppressHydrationWarning>
                                       <button
                                         onClick={() => onAction(`view_field:${value}`, undefined)}
                                         className={styles.fieldLink}
@@ -166,7 +171,7 @@ export default function ChatSidebar({
                                   );
                                 }
 
-                                return <td key={column}>{formatted}</td>;
+                                return <td key={column} suppressHydrationWarning>{formatted}</td>;
                               })}
                             </tr>
                           ))}
@@ -205,14 +210,14 @@ export default function ChatSidebar({
                     <span className={styles.sqlArrow}>▶</span>
                     View SQL Query
                   </summary>
-                  <pre className={styles.sqlCode}>{message.sql}</pre>
+                  <pre className={styles.sqlCode} suppressHydrationWarning>{message.sql}</pre>
                 </details>
               )}
             </div>
           );
         })}
 
-        {isLoading && (
+        {isClient && isLoading && (
           <div className={`${styles.bubble} ${styles.bubbleAssistant} ${styles.bubbleThinking}`}>
             <span className={styles.dot} />
             <span className={styles.dot} />

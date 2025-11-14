@@ -66,7 +66,6 @@ export default function LandingPage() {
             color: '#f3f4f6'
           }}
         >
-          Farm Pulse
         </div>
         <button
           onClick={goToSettings}

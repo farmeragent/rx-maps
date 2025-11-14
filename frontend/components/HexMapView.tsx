@@ -331,7 +331,6 @@ export default function HexMapView({
     <div className="hex-map-view">
       {mounted && DeckGL && Map && (
         <>
-          {console.log('[HexMapView] Rendering DeckGL component with', layersState.length, 'layers')}
           {/* Prescription Map Layer Controls */}
           {prescriptionMaps.length > 0 && (
             <div className="hex-map-view__prescription-controls">
