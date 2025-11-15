@@ -3,6 +3,7 @@ Natural Language to SQL query service using Claude
 """
 import os
 import re
+import random
 from typing import Dict, List, Any, Optional
 from anthropic import Anthropic
 from database import get_db
@@ -179,7 +180,7 @@ Return only valid SQL. Do not include markdown code blocks or explanations."""
 
     def _detect_intent(self, question: str) -> Dict[str, Any]:
         """
-        Detect user intent - whether they want a query or a prescription map
+        Detect user intent - whether they want a query, prescription map, or scatter plot
 
         Args:
             question: User's natural language question
@@ -199,14 +200,17 @@ Classify the user's request into one of these categories:
 1. "prescription_map" - User wants to create a prescription map, variable rate application map, or rx map
    Examples: "create a prescription map", "generate rx map", "make me a prescription", "variable rate application"
 
-2. "query" - User wants to query/search/analyze data
+2. "scatter_plot" - User wants to create a scatter plot, chart, or graph to visualize relationships between variables
+   Examples: "plot yield vs nitrogen", "show me a scatter plot", "chart the relationship", "graph P vs K", "visualize yield and phosphorus"
+
+3. "query" - User wants to query/search/analyze data
    Examples: "show me hexes with low P", "what's the average yield", "find areas that need fertilizer"
 
 Valid Field Names (use EXACTLY as shown if mentioned):
 {field_names_text}
 
 Respond in this exact format:
-INTENT: <prescription_map or query>
+INTENT: <prescription_map or scatter_plot or query>
 FIELD: <exact field name if mentioned, otherwise "all">
 
 Important: If the user mentions a field, use the EXACT field name from the valid list above. Match it case-insensitively but return the exact capitalization.
@@ -276,7 +280,6 @@ User request: """
                 "summary": "I'll create a prescription map for you. This will generate variable rate application maps for nitrogen, phosphorus, and potassium."
             }
 
-        # Otherwise, continue with normal SQL query flow
         # Generate SQL from natural language
         sql = self.natural_language_to_sql(question)
 
@@ -286,6 +289,78 @@ User request: """
         # Execute query
         results = self.db.execute_query(sql)
 
+        # If user wants a scatter plot, prepare the plot data
+        if intent_info["intent"] == "scatter_plot":
+            scatter_plot_data = self._prepare_scatter_plot_data(results)
+
+            if scatter_plot_data:
+                # Get column metadata for axis labels
+                column_metadata = {}
+                if results and len(results) > 0:
+                    column_names = list(results[0].keys())
+                    column_metadata = self._get_column_metadata(column_names)
+
+                # Generate labels from metadata
+                x_col_meta = column_metadata.get(scatter_plot_data['x_column'], {})
+                y_col_meta = column_metadata.get(scatter_plot_data['y_column'], {})
+
+                x_label = x_col_meta.get('display_name', scatter_plot_data['x_column'])
+                y_label = y_col_meta.get('display_name', scatter_plot_data['y_column'])
+
+                if x_col_meta.get('unit'):
+                    x_label += f" ({x_col_meta['unit']})"
+                if y_col_meta.get('unit'):
+                    y_label += f" ({y_col_meta['unit']})"
+
+                scatter_plot_data['x_label'] = x_label
+                scatter_plot_data['y_label'] = y_label
+                scatter_plot_data['title'] = f"{y_label} vs {x_label}"
+
+                # Generate summary message
+                num_points = len(scatter_plot_data['data'][scatter_plot_data['x_column']])
+                total_results = len(results)
+
+                if num_points < total_results:
+                    summary = f"Created scatter plot showing the relationship between {scatter_plot_data['x_column']} and {scatter_plot_data['y_column']} (showing {num_points:,} randomly sampled points from {total_results:,} total data points)."
+                else:
+                    summary = f"Created scatter plot showing the relationship between {scatter_plot_data['x_column']} and {scatter_plot_data['y_column']} ({num_points:,} data points)."
+
+                return {
+                    "question": question,
+                    "intent": "scatter_plot",
+                    "field_name": None,
+                    "sql": sql,
+                    "results": results,
+                    "hex_ids": [],
+                    "count": len(results),
+                    "summary": summary,
+                    "view_type": "scatter_plot",
+                    "column_metadata": column_metadata,
+                    "scatter_plot_data": scatter_plot_data
+                }
+            else:
+                # Fallback: not enough numeric data for scatter plot, treat as normal query
+                summary = "I couldn't create a scatter plot from the query results. The data needs at least 2 numeric columns and 2 data points."
+                view_type = self._determine_view_type(results)
+                column_metadata = {}
+                if results and len(results) > 0:
+                    column_names = list(results[0].keys())
+                    column_metadata = self._get_column_metadata(column_names)
+
+                return {
+                    "question": question,
+                    "intent": "query",
+                    "field_name": None,
+                    "sql": sql,
+                    "results": results,
+                    "hex_ids": [],
+                    "count": len(results),
+                    "summary": summary,
+                    "view_type": view_type,
+                    "column_metadata": column_metadata
+                }
+
+        # Otherwise, continue with normal SQL query flow
         # Extract h3_indexes if present (for map highlighting)
         hex_ids = []
         if results and 'h3_index' in results[0]:
@@ -408,6 +483,88 @@ User request: """
                 }
 
         return metadata
+
+    def _get_numeric_columns(self, results: List[Dict]) -> List[str]:
+        """
+        Get list of numeric columns from query results (excluding h3_index and field_name)
+
+        Args:
+            results: Query results
+
+        Returns:
+            List of numeric column names
+        """
+        if not results or len(results) == 0:
+            return []
+
+        numeric_cols = []
+        skip_cols = {'h3_index', 'field_name'}
+
+        for key, value in results[0].items():
+            if key not in skip_cols and isinstance(value, (int, float)):
+                numeric_cols.append(key)
+
+        return numeric_cols
+
+    def _prepare_scatter_plot_data(self, results: List[Dict], max_points: int = 10000) -> Optional[Dict[str, Any]]:
+        """
+        Prepare scatter plot data from query results
+        Uses first two numeric columns automatically
+        Samples data randomly if there are more than max_points for efficient rendering
+
+        Args:
+            results: Query results
+            max_points: Maximum number of points to include (default: 10000)
+
+        Returns:
+            Dictionary with scatter plot data or None if insufficient numeric columns
+        """
+        if not results or len(results) < 2:
+            return None
+
+        numeric_cols = self._get_numeric_columns(results)
+
+        # Need at least 2 numeric columns for scatter plot
+        if len(numeric_cols) < 2:
+            return None
+
+        x_column = numeric_cols[0]
+        y_column = numeric_cols[1]
+
+        # Extract column data
+        data = {
+            x_column: [],
+            y_column: []
+        }
+
+        for row in results:
+            x_val = row.get(x_column)
+            y_val = row.get(y_column)
+
+            # Only include rows with valid numeric values
+            if x_val is not None and y_val is not None:
+                data[x_column].append(float(x_val))
+                data[y_column].append(float(y_val))
+
+        # Need at least 2 data points
+        if len(data[x_column]) < 2:
+            return None
+
+        # Sample data if there are too many points
+        total_points = len(data[x_column])
+        if total_points > max_points:
+            # Random sampling to preserve distribution
+            indices = random.sample(range(total_points), max_points)
+            indices.sort()  # Keep chronological order if there is one
+
+            data[x_column] = [data[x_column][i] for i in indices]
+            data[y_column] = [data[y_column][i] for i in indices]
+
+        return {
+            'data': data,
+            'x_column': x_column,
+            'y_column': y_column
+        }
 
     def _determine_view_type(self, results: List[Dict]) -> Optional[str]:
         """

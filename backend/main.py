@@ -63,6 +63,7 @@ class QueryResponse(BaseModel):
     summary: str
     view_type: Optional[str] = None
     column_metadata: Optional[Dict[str, Dict[str, str]]] = None
+    scatter_plot_data: Optional[Dict[str, Any]] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -150,7 +151,8 @@ async def query_database(request: QueryRequest):
             count=result['count'],
             summary=result['summary'],
             view_type=result.get('view_type'),
-            column_metadata=result.get('column_metadata')
+            column_metadata=result.get('column_metadata'),
+            scatter_plot_data=result.get('scatter_plot_data')
         )
 
     except Exception as e:

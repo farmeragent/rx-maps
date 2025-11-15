@@ -4,8 +4,18 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChatSidebar, { ChatMessageAction } from './ChatSidebar';
 import HexMapView from './HexMapView';
+import ScatterPlot from './ScatterPlot';
 import { usePersistentChat } from '../hooks/usePersistentChat';
 import { DEFAULT_CHAT_MESSAGES, FIELD_NAMES } from '../constants';
+
+interface ScatterPlotData {
+  data: Record<string, number[]>;
+  x_column: string;
+  y_column: string;
+  title?: string;
+  x_label?: string;
+  y_label?: string;
+}
 
 interface QueryResult {
   question: string;
@@ -16,8 +26,9 @@ interface QueryResult {
   hex_ids: string[];
   count: number;
   summary: string;
-  view_type?: 'map' | 'table' | null;
+  view_type?: 'map' | 'table' | 'scatter_plot' | null;
   column_metadata?: Record<string, { display_name: string; unit?: string }>;
+  scatter_plot_data?: ScatterPlotData;
 }
 
 const API_BASE_URL = '/api/hex-query';
@@ -43,11 +54,12 @@ export default function HexQuery() {
   } = usePersistentChat({ initialMessages: DEFAULT_CHAT_MESSAGES });
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentView, setCurrentView] = useState<'map' | 'table' | null>(null);
+  const [currentView, setCurrentView] = useState<'map' | 'table' | 'scatter_plot' | null>(null);
   const [hasShownMap, setHasShownMap] = useState(false);
   const [isFullWidth, setIsFullWidth] = useState(true); // Start with full-width chat
   const [pendingAllFieldsPrompt, setPendingAllFieldsPrompt] = useState(false);
   const [lastPrescriptionField, setLastPrescriptionField] = useState<string | null>(null);
+  const [scatterPlotData, setScatterPlotData] = useState<ScatterPlotData | null>(null);
 
   // Map-specific state
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
@@ -501,6 +513,18 @@ export default function HexQuery() {
 
           // Add bot message without table data
           addBotMessage(result.summary, { sql: result.sql });
+        } else if (result.view_type === 'scatter_plot') {
+          // Scatter plot view: show in main panel
+          setCurrentView('scatter_plot');
+          setHasShownMap(true); // Reuse this flag to show main panel
+          setIsFullWidth(false); // Switch to sidebar mode
+
+          if (result.scatter_plot_data) {
+            setScatterPlotData(result.scatter_plot_data);
+          }
+
+          // Add bot message
+          addBotMessage(result.summary, { sql: result.sql });
         } else if (result.view_type === 'table') {
           // Table view: embed in chat, don't change main view
       addBotMessage(result.summary, {
@@ -530,6 +554,7 @@ export default function HexQuery() {
       setVisibleFieldNames(new Set(ALL_FIELD_NAMES));
       setPendingAllFieldsPrompt(false);
       setLastPrescriptionField(null);
+      setScatterPlotData(null); // Clear scatter plot data
     } catch (error) {
       console.error('Failed to clear history:', error);
     }
@@ -726,11 +751,27 @@ export default function HexQuery() {
             </div>
           )}
 
+          {/* Scatter plot view */}
+          {scatterPlotData && currentView === 'scatter_plot' && (
+            <div
+              className="hex-query-scatter-container"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%'
+              }}
+            >
+              <ScatterPlot plotData={scatterPlotData} />
+            </div>
+          )}
+
           {!currentView && (
             <div className="hex-query-empty">
               <div className="hex-query-empty__content">
                 <h2>Ask me anything about your fields</h2>
-                <p>I'll show you maps or direct answers based on your question.</p>
+                <p>I'll show you maps, plots, or direct answers based on your question.</p>
               </div>
             </div>
           )}

@@ -21,6 +21,7 @@
 # misc
 /frontend/.DS_Store
 /frontend/*.pem
+/frontend/package-lock.json
 
 # debug
 /frontend/npm-debug.log*
