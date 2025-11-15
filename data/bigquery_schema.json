@@ -1,0 +1,92 @@
+[
+  {
+    "name": "h3_index",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Unique H3 hexagon identifier (geospatial index)"
+  },
+  {
+    "name": "area",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "The area of ground the hex takes up, measured in acres"
+  },
+  {
+    "name": "pH",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "The acidity or alkalinity of the soil, expressed on a scale from 0 to 14, and fundamentally dictates the availability of nutrients to the plant"
+  },
+  {
+    "name": "P_in_soil",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current phosphorus level in soil (lbs per acre). Phosphorus is critical for root development and energy transfer"
+  },
+  {
+    "name": "K_in_soil",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current potassium level in soil (lbs per acre). Potassium helps with disease resistance and water regulation"
+  },
+  {
+    "name": "cec",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current CEC (Cation Exchange Capacity) level in soil (meq / 100g). Measure of a soil's ability to hold and supply positively charged nutrient ions"
+  },
+  {
+    "name": "yield_target",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "The farmer's intended yield goal for the hexagon (bushels per acre). Higher values indicate areas with better yield potential"
+  },
+  {
+    "name": "calcium",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current calcium level in soil (lbs per acre). Calcium strengthens plant cell walls, promotes root and shoot growth, and is essential for improving soil structure"
+  },
+  {
+    "name": "magnesium",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current magnesium level in soil (lbs per acre). An essential secondary nutrient, a critical component of the chlorophyll molecule required for photosynthesis"
+  },
+  {
+    "name": "N_in_soil",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Current nitrogen level in soil (lbs per acre). Nitrogen is typically very low in soil tests as it's highly mobile. Most N comes from fertilizer application"
+  },
+  {
+    "name": "N_to_apply",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Recommended nitrogen fertilizer application amount (lbs per acre). Application rate based on yield target and soil test"
+  },
+  {
+    "name": "P_to_apply",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Recommended phosphorus fertilizer application amount (lbs per acre). Calculated based on soil test levels"
+  },
+  {
+    "name": "K_to_apply",
+    "type": "FLOAT64",
+    "mode": "NULLABLE",
+    "description": "Recommended potassium fertilizer application amount (lbs per acre). Based on soil K levels and crop removal rates"
+  },
+  {
+    "name": "geometry_wkt",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Spatial polygon representing the hexagon boundary in Well-Known Text (WKT) format"
+  },
+  {
+    "name": "field_name",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The name of the field."
+  }
+]
