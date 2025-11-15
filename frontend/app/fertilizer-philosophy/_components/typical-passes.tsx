@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { THEME } from '../_lib/constants';
+import { THEME } from '../../_lib/constants';
 
 type Phase = 'pre-plant' | 'post-plant';
 
