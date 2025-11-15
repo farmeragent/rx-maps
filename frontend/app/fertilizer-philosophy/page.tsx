@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import TypicalPasses from '../../components/TypicalPasses';
-import { THEME } from '../../constants';
+import TypicalPasses from '../_components/typical-passes';
+import { THEME } from '../_lib/constants';
 
 export default function FertilizerPhilosophyPage() {
   const router = useRouter();

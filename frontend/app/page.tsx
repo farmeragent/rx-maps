@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { THEME } from '../constants';
+import { THEME } from './_lib/constants';
 
 const SUGGESTIONS = [
   'Where should I apply lime in railroad pivot?',

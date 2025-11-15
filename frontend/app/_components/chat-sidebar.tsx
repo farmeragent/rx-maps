@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
-import styles from './ChatSidebar.module.css';
+import styles from './chat-sidebar.module.css';
 
 export type ChatActionVariant = 'primary' | 'secondary' | 'link';
 

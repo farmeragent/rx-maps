@@ -2,11 +2,10 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import styles from '../pageStyles';
-import { FIELD_NAMES, THEME } from '../../constants';
-import ChatSidebar from '../../components/ChatSidebar';
-import { usePersistentChat } from '../../hooks/usePersistentChat';
-import { DEFAULT_CHAT_MESSAGES } from '../../constants';
+import styles from '../page-styles';
+import { FIELD_NAMES, THEME, DEFAULT_CHAT_MESSAGES } from '../_lib/constants';
+import ChatSidebar from '../_components/chat-sidebar';
+import { usePersistentChat } from '../_hooks/use-persistent-chat';
 type PageKey = 'fields' | 'yield' | 'nutrient-capacity' | 'nutrient-needed' | 'fertility-planning' | 'yield-view' | 'nutrient-capacity-view';
 
 type Phase = 'pre-plant' | 'post-plant';

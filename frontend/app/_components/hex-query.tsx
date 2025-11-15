@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ChatSidebar, { ChatMessageAction } from './ChatSidebar';
-import HexMapView from './HexMapView';
-import ScatterPlot from './ScatterPlot';
-import { usePersistentChat } from '../hooks/usePersistentChat';
-import { DEFAULT_CHAT_MESSAGES, FIELD_NAMES } from '../constants';
+import ChatSidebar, { ChatMessageAction } from './chat-sidebar';
+import HexMapView from './hex-map-view';
+import ScatterPlot from './scatter-plot';
+import { usePersistentChat } from '../_hooks/use-persistent-chat';
+import { DEFAULT_CHAT_MESSAGES, FIELD_NAMES } from '../_lib/constants';
 
 interface ScatterPlotData {
   data: Record<string, number[]>;

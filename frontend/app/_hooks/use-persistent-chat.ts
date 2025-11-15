@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatMessage, ChatMessageAction } from '../components/ChatSidebar';
+import type { ChatMessage, ChatMessageAction } from '../_components/chat-sidebar';
 
 interface UsePersistentChatOptions {
   storageKey?: string;

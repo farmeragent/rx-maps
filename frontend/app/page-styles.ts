@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { THEME } from '../constants';
+import { THEME } from './_lib/constants';
 
 const TEXT_PRIMARY = '#111827';
 const TEXT_SECONDARY = '#334155';

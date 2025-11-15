@@ -1,3 +1,3 @@
 'use client';
 
-export { default } from '../../components/HexQuery';
+export { default } from '../_components/hex-query';

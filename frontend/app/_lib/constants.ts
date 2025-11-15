@@ -1,5 +1,5 @@
 import { SUBRESOURCE_INTEGRITY_MANIFEST } from 'next/dist/shared/lib/constants';
-import type { ChatMessage } from './components/ChatSidebar';
+import type { ChatMessage } from '../_components/chat-sidebar';
 
 export const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [
   {
