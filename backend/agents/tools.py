@@ -11,7 +11,15 @@ from google.adk.tools import ToolContext
 from google.adk.tools.bigquery.client import get_bigquery_client
 from google.cloud import bigquery
 
-from backend.results_cache import store_result
+# Use relative import since this is in agents/ subdirectory
+try:
+    from ..results_cache import store_result
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from results_cache import store_result
 
 
 logger = logging.getLogger(__name__)
