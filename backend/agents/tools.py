@@ -1,8 +1,6 @@
 import json
 import logging
 import os
-import time
-import uuid
 from typing import Tuple, Optional
 
 import sqlglot
@@ -14,17 +12,6 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
-# Use relative import since this is in agents/ subdirectory
-try:
-    from ..results_cache import store_result
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from results_cache import store_result
-
 
 logger = logging.getLogger(__name__)
 
@@ -379,8 +366,7 @@ def execute_SQL_query(
     Returns:
         A dictionary with the following keys:
         `status`: "SUCCESS" (query was successful) or "ERROR" (query failed)
-        `result`: The table result to summarize.
-        `result_id`: A hash that can be used to retrieve a json of the full result.
+        `row_count`: The number of rows returned from this query.
         `acres`(optional): The number of acres returned from this query.
         `error_details`(optional): If there's an error, what caused the error.
     """
@@ -413,22 +399,14 @@ def execute_SQL_query(
         for key, val in row.items():
             columns[key].append(val)
 
-    # Generate unique ID for this result
-    result_id = str(uuid.uuid4())
+    # Calculate row count
+    row_count = len(columns.get(list(columns.keys())[0], [])) if columns else 0
 
-    # Store in tool_context.state (for ADK session)
-    tool_context.state["result_id"] = result_id
-
-    # Store full result data in cache (Redis or in-memory)
-    result_data = {
-        "sql": sql,
-        "columns": columns,
-        "row_count": len(columns.get(list(columns.keys())[0], [])) if columns else 0,
-        "timestamp": time.time()
+    result = {
+        "status": "SUCCESS",
+        "row_count": row_count
     }
-    store_result(result_id, result_data)
 
-    result = {"status": "SUCCESS"}
     if 'area' in columns.keys():
         result['acres'] = sum(columns['area'])
 
