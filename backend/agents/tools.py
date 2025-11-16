@@ -411,7 +411,6 @@ def execute_SQL_query(
         "timestamp": time.time()
     }
     store_result(result_id, result_data)
-    breakpoint()
 
     result = {"status": "SUCCESS"}
     if 'area' in columns.keys():
