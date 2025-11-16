@@ -6,7 +6,7 @@
 /backend/__pycache__
 /backend/.env
 /backend/extensions_dir/*
-
+*__pycache__*
 
 # testing
 /frontend/coverage

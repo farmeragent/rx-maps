@@ -29,9 +29,43 @@ interface QueryResult {
   view_type?: 'map' | 'table' | 'scatter_plot' | null;
   column_metadata?: Record<string, { display_name: string; unit?: string }>;
   scatter_plot_data?: ScatterPlotData;
+  result_id?: string; // UUID for fetching full results from cache
 }
 
 const API_BASE_URL = '/api/hex-query';
+
+/**
+ * Fetch full query results from cache by result_id
+ */
+async function fetchFullResults(resultId: string): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}?result_id=${resultId}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch results');
+  }
+
+  const data = await response.json();
+
+  // Convert column-based format to row-based format
+  if (data.columns) {
+    const columnNames = Object.keys(data.columns);
+    const rowCount = data.row_count || 0;
+    const rows = [];
+
+    for (let i = 0; i < rowCount; i++) {
+      const row: any = {};
+      for (const colName of columnNames) {
+        row[colName] = data.columns[colName][i];
+      }
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
+  return data;
+}
 
 const GEOJSON_SOURCES = [
   { path: '/north-of-road-high-res.geojson', fieldName: 'North of Road' },
@@ -527,11 +561,27 @@ export default function HexQuery() {
           addBotMessage(result.summary, { sql: result.sql });
         } else if (result.view_type === 'table') {
           // Table view: embed in chat, don't change main view
-      addBotMessage(result.summary, {
-        sql: result.sql,
-        tableData: result.results,
-        columnMetadata: result.column_metadata
-      });
+          // Fetch full results if we only have result_id
+          let tableData = result.results;
+
+          if (result.result_id && (!tableData || tableData.length === 0)) {
+            try {
+              tableData = await fetchFullResults(result.result_id);
+            } catch (error) {
+              console.error('Failed to fetch full results:', error);
+              addBotMessage(
+                result.summary + '\n\n⚠️ Could not load full table data.',
+                { sql: result.sql }
+              );
+              return;
+            }
+          }
+
+          addBotMessage(result.summary, {
+            sql: result.sql,
+            tableData: tableData,
+            columnMetadata: result.column_metadata
+          });
         } else {
           // Simple answer: keep current view, show in chat only
           addBotMessage(result.summary, { sql: result.sql });
