@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-
 logger = logging.getLogger(__name__)
 
 database_settings = None
@@ -399,14 +398,12 @@ def execute_SQL_query(
         for key, val in row.items():
             columns[key].append(val)
 
-    # Calculate row count
-    row_count = len(columns.get(list(columns.keys())[0], [])) if columns else 0
 
-    result = {
-        "status": "SUCCESS",
-        "row_count": row_count
-    }
+    # Store the data in tool_context.state for access in response.
+    tool_context.state["data"] = columns
 
+    # Summarize the results for the natural language model
+    result = {"status": "SUCCESS"}
     if 'area' in columns.keys():
         result['acres'] = sum(columns['area'])
 
