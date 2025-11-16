@@ -10,6 +10,9 @@ from google.adk.tools.bigquery.client import get_bigquery_client
 from google.cloud import bigquery
 from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+
 
 logger = logging.getLogger(__name__)
 
