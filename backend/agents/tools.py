@@ -10,8 +10,6 @@ from google.adk.tools.bigquery.client import get_bigquery_client
 from google.cloud import bigquery
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,6 @@ if not api_key:
     raise ValueError("GOOGLE_API_KEY environment variable is not set")
 llm_client = genai.Client(api_key=api_key)
 
-IN_MEMORY_DATA_CACHE = {}
 
 def get_database_settings():
     """Get database settings."""

@@ -5,7 +5,6 @@ Agricultural database query system powered by AI agents and BigQuery.
 ## Prerequisites
 
 - Python 3.13+
-- Redis (for caching query results)
 - Google Cloud Project with BigQuery enabled
 - Anthropic API key
 
@@ -20,9 +19,6 @@ source data/venv/bin/activate
 
 # Install Python packages
 pip install -r requirements.txt
-
-# Install Redis (macOS)
-brew install redis
 ```
 
 ### 2. Configure Environment Variables
@@ -49,39 +45,15 @@ DATABASE_PATH=../data/agricultural_data.db  # Path to local SQLite database
 # Mapbox Configuration (for satellite imagery)
 MAPBOX_TOKEN=your_mapbox_token  # Get free token at https://mapbox.com
 
-# Redis Configuration (defaults shown)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
-REDIS_PASSWORD=  # Leave empty if no password
-
-# Server Ports
-API_PORT=8000  # Custom API server port
-PORT=8001      # ADK agent server port (set via command line)
+# Server Port
+PORT=8001  # ADK agent server port (set via command line)
 ```
 
-## Running the Servers
+## Running the Server
 
-The application requires **three** services to be running:
+### Start the ADK Agent Server (Port 8001)
 
-### 1. Start Redis Server
-
-Redis is required for caching query results between the ADK agent and custom API server.
-
-```bash
-# Start Redis as a background service
-brew services start redis
-
-# Or run Redis in the foreground (for debugging)
-redis-server
-
-# Verify Redis is running
-redis-cli ping  # Should return "PONG"
-```
-
-### 2. Start the ADK Agent Server (Port 8001)
-
-The ADK agent server handles AI-powered query processing.
+The ADK agent server handles AI-powered query processing and stores results in the session state.
 
 ```bash
 cd backend
@@ -91,73 +63,25 @@ adk web --port 8001
 
 Access the agent UI at: http://localhost:8001
 
-### 3. Start the Custom API Server (Port 8000)
+## How It Works
 
-The custom API server provides endpoints to fetch query results by UUID.
+1. **User submits a query** to the ADK agent (e.g., "Show me areas with low phosphorus")
+2. **Agent processes the query** using BigQuery tools to fetch data
+3. **Results are stored** in `tool_context.state["data"]` as a dictionary of columns
+4. **Agent responds** with a summary and the data is available in the session state
 
-```bash
-# In a new terminal
-cd backend
-source ../data/venv/bin/activate
-uvicorn server:app --reload --host 0.0.0.0 --port 8000
-```
+### Accessing Results
 
-#### Custom API Endpoints
-
-- `GET /api/health` - Health check and cache status
-- `GET /api/results/{result_id}` - Get query result by UUID
-- `GET /api/results` - List all cached result UUIDs
-- `GET /api/cache/status` - Cache system status
-
-### Quick Start Script
-
-For convenience, you can start both servers with:
+Query results are stored in the ADK session state and can be accessed via the session API:
 
 ```bash
-cd backend
-source ../data/venv/bin/activate
-./start_servers.sh
+# Get session state (includes data, SQL query, etc.)
+curl http://localhost:8001/apps/agents/users/{user_id}/sessions/{session_id}
 ```
 
-## Architecture
-
-```
-┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  ADK Agent      │────▶│    Redis     │◀────│  Custom API     │
-│  (Port 8001)    │     │  (Port 6379) │     │  (Port 8000)    │
-│                 │     └──────────────┘     │                 │
-│ - AI queries    │                          │ - Result fetch  │
-│ - Store results │                          │ - Result list   │
-└─────────────────┘                          └─────────────────┘
-```
-
-1. **ADK Agent** processes queries and stores results in Redis with a UUID
-2. **Redis** provides shared cache between servers (results expire after 24h)
-3. **Custom API** retrieves results from Redis by UUID
-
-## Troubleshooting
-
-### "Result not found or expired" Error
-
-This error occurs when:
-
-1. **Redis is not running**: Start Redis with `brew services start redis`
-2. **Servers not using Redis**: Check logs for "Redis not available" warnings
-3. **Result actually expired**: Results are cached for 24 hours
-4. **Wrong UUID**: Verify you're using the exact UUID from the agent output
-
-### Verify Redis Connection
-
-```bash
-# Check if Redis is running
-redis-cli ping
-
-# Check what's in Redis
-redis-cli KEYS "query_result:*"
-
-# Check API server cache status
-curl http://localhost:8000/api/cache/status
-```
+The session state contains:
+- `data`: Dictionary of column names to values
+- `sql_query`: The SQL query that was executed (if available)
 
 ## Development
 
@@ -166,16 +90,24 @@ curl http://localhost:8000/api/cache/status
 ```
 backend/
 ├── agents/          # ADK agent and tools
-│   ├── tools.py    # Query execution and result storage
-│   └── __init__.py
-├── server.py        # Custom API server
-├── results_cache.py # Redis/memory cache implementation
+│   ├── tools.py    # Query execution tools
+│   ├── agent.py    # Agent configuration
+│   └── prompts.py  # Agent prompts
+├── test_adk_response.py  # Test script for ADK endpoints
 └── .env            # Environment variables
 ```
 
-### Cache Implementation
+### Testing
 
-- **Redis** (recommended): Persistent cache shared between server processes
-- **In-Memory** (fallback): Used when Redis is unavailable, but each server process has separate memory
+Use the test script to verify the agent is working:
 
-**Important**: Without Redis, the ADK agent and custom API server cannot share cached results!
+```bash
+cd backend
+python test_adk_response.py
+```
+
+This will:
+1. Create a test session
+2. Send a query to the agent
+3. Print the response and session state
+4. Show the data stored in `tool_context.state`
