@@ -10,6 +10,10 @@ from google import genai
 from google.adk.tools import ToolContext
 from google.adk.tools.bigquery.client import get_bigquery_client
 from google.cloud import bigquery
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Use relative import since this is in agents/ subdirectory
 try:
@@ -30,7 +34,11 @@ dataset_id = os.getenv("BQ_DATASET_ID")
 data_project = os.getenv("GOOGLE_PROJECT_ID")
 MAX_NUM_ROWS = 100
 
-llm_client = genai.Client()
+# Initialize genai client with API key
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    raise ValueError("GOOGLE_API_KEY environment variable is not set")
+llm_client = genai.Client(api_key=api_key)
 
 IN_MEMORY_DATA_CACHE = {}
 
