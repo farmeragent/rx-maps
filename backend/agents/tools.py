@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import time
+import uuid
 from typing import Tuple, Optional
 
 import sqlglot
@@ -8,6 +10,8 @@ from google import genai
 from google.adk.tools import ToolContext
 from google.adk.tools.bigquery.client import get_bigquery_client
 from google.cloud import bigquery
+
+from backend.results_cache import store_result
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +23,8 @@ data_project = os.getenv("GOOGLE_PROJECT_ID")
 MAX_NUM_ROWS = 100
 
 llm_client = genai.Client()
+
+IN_MEMORY_DATA_CACHE = {}
 
 def get_database_settings():
     """Get database settings."""
@@ -391,8 +397,22 @@ def execute_SQL_query(
         for key, val in row.items():
             columns[key].append(val)
 
+    # Generate unique ID for this result
+    result_id = str(uuid.uuid4())
+
+    # Store in tool_context.state (for ADK session)
+    tool_context.state["result_id"] = result_id
+
+    # Store full result data in cache (Redis or in-memory)
+    result_data = {
+        "sql": sql,
+        "columns": columns,
+        "row_count": len(columns.get(list(columns.keys())[0], [])) if columns else 0,
+        "timestamp": time.time()
+    }
+    store_result(result_id, result_data)
     breakpoint()
-    # Summarize the results for the model.
+
     result = {"status": "SUCCESS"}
     if 'area' in columns.keys():
         result['acres'] = sum(columns['area'])
