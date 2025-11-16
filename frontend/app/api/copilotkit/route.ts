@@ -1,5 +1,10 @@
 import { HttpAgent } from "@ag-ui/client";
-import { CopilotRuntime, streamHttpServerResponse } from "@copilotkit/runtime";
+import {
+  CopilotRuntime,
+  ExperimentalEmptyAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint,
+} from "@copilotkit/runtime";
+
 import { NextRequest } from "next/server";
 
 /**
@@ -11,25 +16,23 @@ import { NextRequest } from "next/server";
  * Architecture:
  * Frontend (CopilotKit React) → This Next.js API Route (GraphQL) → AG-UI Backend (port 8001)
  */
+const serviceAdapter = new ExperimentalEmptyAdapter();
+
+
+const runtime = new CopilotRuntime({
+  agents: {
+    // Our AG-UI endpoint URL
+    "root_agent": new HttpAgent({ url: "http://localhost:8001/copilot" }),
+  }
+});
+
 
 export async function POST(req: NextRequest) {
   // Create HttpAgent instance that connects to our AG-UI backend
-  const httpAgent = new HttpAgent({
-    url: "http://localhost:8001/copilot",
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter,
+    endpoint: "/api/copilotkit",
   });
-
-  // Create CopilotRuntime with the agent
-  const runtime = new CopilotRuntime({
-    agents: [
-      {
-        name: "root_agent",
-        description: "Helps query an agricultural database using BigQuery",
-        agent: httpAgent,
-      },
-    ],
-  });
-
-  // Handle the incoming request
-  const { handleRequest } = runtime;
   return handleRequest(req);
 }
