@@ -117,12 +117,13 @@ def test_adk_run_endpoint():
         print(f"State Keys: {list(session_state.keys())}")
         pprint(session_state, width=120)
 
-        # Access result_id if it exists
-        result_id = session_state.get("result_id")
-        if result_id:
-            print(f"\n✓ Found result_id in state: {result_id}")
+        # Access data if it exists
+        data = session_state.get("data")
+        if data:
+            print(f"\n✓ Found data in state with {len(data)} columns")
+            print(f"  Columns: {list(data.keys())}")
         else:
-            print("\n✗ result_id not found in state")
+            print("\n✗ data not found in state")
 
         # Access SQL query if it exists
         sql_query = session_state.get("sql_query")
