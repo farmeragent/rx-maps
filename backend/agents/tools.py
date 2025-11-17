@@ -13,10 +13,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 72c5dc1 (Update test)
 logger = logging.getLogger(__name__)
 
 database_settings = None
@@ -402,10 +398,6 @@ def execute_SQL_query(
         for key, val in row.items():
             columns[key].append(val)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 72c5dc1 (Update test)
     # Store the data in tool_context.state for access in response.
     tool_context.state["data"] = columns
 
