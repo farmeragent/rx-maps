@@ -19,7 +19,7 @@ def test_adk_run_endpoint():
 
     # Endpoint URLs
     create_session_url = f"{ADK_HOST}/apps/{app_name}/users/{user_id}/sessions"
-    run_url = f"{ADK_HOST}/run"
+    run_url = f"{ADK_HOST}/copilot"
     session_url = f"{ADK_HOST}/apps/{app_name}/users/{user_id}/sessions/{session_id}"
 
     try:
