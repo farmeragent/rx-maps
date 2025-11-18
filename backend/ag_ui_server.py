@@ -16,21 +16,21 @@ load_dotenv()
 # Create FastAPI app
 app = FastAPI(
     title="Farm Pulse AG-UI Server",
-    description="ADK agent exposed via AG-UI protocol for CopilotKit integration",
+    description="ADK agent exposed via AG-UI protocol",
     version="1.0.0"
 )
 
 # Add logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    if request.url.path == "/copilot":
+    if request.url.path == "/":
         body = await request.body()
-        print(f"\n🔍 Incoming request to /copilot:")
+        print(f"\n🔍 Incoming request to /:")
         print(f"   Method: {request.method}")
         print(f"   Headers: {dict(request.headers)}")
         print(f"   Body: {body.decode() if body else 'empty'}")
     response = await call_next(request)
-    if request.url.path == "/copilot":
+    if request.url.path == "/":
         print(f"   Response status: {response.status_code}")
     return response
 
@@ -55,7 +55,7 @@ adk_agent = ADKAgent(
 add_adk_fastapi_endpoint(
     app=app,
     agent=adk_agent,
-    path="/copilot"
+    path="/"
 )
 
 @app.get("/")
@@ -65,10 +65,6 @@ async def root():
         "name": "Farm Pulse AG-UI Server",
         "version": "1.0.0",
         "description": "ADK agent exposed via AG-UI protocol",
-        "endpoints": {
-            "copilot": "POST /copilot (AG-UI endpoint for CopilotKit)",
-            "health": "/health"
-        },
         "agent": {
             "name": root_agent.name,
             "description": root_agent.description
