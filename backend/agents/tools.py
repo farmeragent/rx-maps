@@ -357,15 +357,20 @@ def generate_SQL_query(
 def execute_SQL_query(
     sql: str,
     tool_context: ToolContext,
+    max_rows: int = 1000,
 ) -> str:
     """Executes a SQL query from a SQL query string.
     Args:
         sql_query: A string of the SQL query you want to do.
+        max_rows: Maximum number of rows to return (default 1000). If the query returns more rows,
+                  a random sample will be taken.
 
     Returns:
         A dictionary with the following keys:
         `status`: "SUCCESS" (query was successful) or "ERROR" (query failed)
-        `row_count`: The number of rows returned from this query.
+        `row_count`: The number of rows returned after sampling.
+        `total_rows`: The total number of rows before sampling.
+        `sampled`: Boolean indicating if the data was sampled.
         `acres`(optional): The number of acres returned from this query.
         `error_details`(optional): If there's an error, what caused the error.
     """
@@ -398,25 +403,42 @@ def execute_SQL_query(
         for key, val in row.items():
             columns[key].append(val)
 
+    # Calculate total row count before sampling
+    first_column = next(iter(columns.values())) if columns else []
+    total_rows = len(first_column)
+
+    # Apply sampling if data exceeds max_rows
+    sampled = False
+    if total_rows > max_rows:
+        import random
+        sampled = True
+        # Generate random indices for sampling
+        sample_indices = random.sample(range(total_rows), max_rows)
+        sample_indices.sort()  # Sort to maintain some order
+
+        # Sample each column
+        sampled_columns = {}
+        for col_name, col_data in columns.items():
+            sampled_columns[col_name] = [col_data[i] for i in sample_indices]
+
+        columns = sampled_columns
+        logger.info(f"Sampled {max_rows} rows from {total_rows} total rows")
+
     # Store the data in tool_context.state for access in response.
     tool_context.state["data"] = columns
 
-    # Calculate row count
-    first_column = next(iter(columns.values())) if columns else []
-    row_count = len(first_column)
+    # Calculate row count after sampling
+    row_count = len(next(iter(columns.values()))) if columns else 0
 
     # Summarize the results for the natural language model
-    # result = {
-    #     "status": "SUCCESS",
-    #     "random": "TESTING",
-    #     "data": columns,  # Include the actual data in the response
-    #     "row_count": row_count
-    # }
-
     result = {
         "status": "SUCCESS",
-        "random": "TESTING",
+        "data": columns,  # Include the actual data in the response
+        "row_count": row_count,
+        "total_rows": total_rows,
+        "sampled": sampled,
     }
+
     if 'area' in columns.keys():
         result['acres'] = sum(columns['area'])
 

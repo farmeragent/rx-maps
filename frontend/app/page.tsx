@@ -7,8 +7,6 @@ import HexMapView from "./_components/hex-map-view";
 import ScatterPlot from "./_components/scatter-plot";
 import Table from "./_components/table";
 
-
-
 enum ViewType {
   HOME = 'HOME',
   MAP = 'MAP',
@@ -30,6 +28,22 @@ interface LastQueryDisplayProps {
   lastToolCall: { sql: string } | null;
 }
 
+const processTableData = (data: Record<string, number[]>): Record<string, any>[] => {
+  const columns = Object.keys(data);
+  const rowCount = columns.length > 0 ? data[columns[0]]?.length || 0 : 0;
+  const rows: Record<string, any>[] = [];
+
+  for (let i = 0; i < rowCount; i++) {
+    const row: Record<string, any> = {};
+    columns.forEach(col => {
+      row[col] = data[col][i];
+    });
+    rows.push(row);
+  }
+
+  return rows;
+};
+
 const LastQueryDisplay = ({ lastToolCall }: LastQueryDisplayProps) => {
   if (!lastToolCall) return null;
 
@@ -49,37 +63,64 @@ const LastQueryDisplay = ({ lastToolCall }: LastQueryDisplayProps) => {
 };
 
 const ToolView = () => {
-  const [view, setView] = useState<ViewType>(ViewType.HOME);
+  const [view, setView] = useState<ViewType>(ViewType.MAP);
   const [lastToolCall, setLastToolCall] = useState<{sql: string} | null>(null);
   const [scatterPlotData, setScatterPlotData] = useState<ScatterPlotData | null>(null);
   const [tableData, setTableData] = useState<any[] | null>(null);
   const [mapData, setMapData] = useState<any>(null);
+  const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
+  // Load default GeoJSON data on mount
+  useEffect(() => {
+    const loadGeoJson = async () => {
+      try {
+        const response = await fetch('/north-of-road-high-res.geojson');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch GeoJSON: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('✅ Loaded default GeoJSON:', data);
+        setGeoJsonData(data);
+      } catch (error) {
+        console.error('❌ Failed to load GeoJSON:', error);
+      }
+    };
+
+    loadGeoJson();
+  }, []);
 
   useEffect(() => {
     console.log("CURRENT VIEW:", view);
   }, [view]);
 
+
+  // Receive SQL query execution results (the actual data) from backend
   useFrontendTool({
-    name: "receive_sql_query_result",
-    description: "Receive the generated SQL query result from generate_SQL_query. Call this after generating a SQL query to pass the results to the frontend.",
+    name: "receive_sql_execution_result",
+    description: "Receive the actual data results from execute_SQL_query. Call this after executing a SQL query to display the data in the frontend. The data should be in column-oriented format (e.g., {\"column1\": [val1, val2], \"column2\": [val3, val4]}).",
     parameters: [
       {
         name: "status",
         type: "string",
-        description: "Status of SQL generation (SUCCESS or ERROR)",
+        description: "Status of SQL execution (SUCCESS or ERROR)",
         required: true,
       },
       {
-        name: "sql_query",
-        type: "string",
-        description: "The generated SQL query",
+        name: "data",
+        type: "object",
+        description: "Column-oriented data from the query result. Keys are column names, values are arrays of values.",
+        required: true,
+      },
+      {
+        name: "row_count",
+        type: "number",
+        description: "Number of rows returned",
         required: false,
       },
       {
-        name: "sql_summary",
-        type: "string",
-        description: "Natural language explanation of the query",
+        name: "acres",
+        type: "number",
+        description: "Total acres if area column exists",
         required: false,
       },
       {
@@ -89,161 +130,85 @@ const ToolView = () => {
         required: false,
       },
       {
+        name: "sql",
+        type: "string",
+        description: "The SQL query that was executed",
+        required: false,
+      },
+      {
         name: "error_details",
         type: "string",
         description: "Error details if status is ERROR",
         required: false,
       },
     ],
-    handler: async ({ status, sql_query, sql_summary, expected_answer_type, error_details }) => {
-        console.log("📊 Received SQL query result:", {
+    handler: async ({ status, data, row_count, acres, expected_answer_type, sql, error_details }) => {
+        console.log("📊 Received SQL execution result:", {
           status,
-          sql_query,
-          sql_summary,
+          data,
+          row_count,
+          acres,
           expected_answer_type,
+          sql,
           error_details
         });
 
-        if (status === "SUCCESS" && sql_query) {
-          // Store the SQL query
-          setLastToolCall({ sql: sql_query });
+        if (sql) {
+          setLastToolCall({ sql });
+        }
 
-          // Switch view based on expected answer type
-          switch (expected_answer_type) {
-            case "MAP":
-              setView(ViewType.MAP);
+        if (status === "SUCCESS" && data && expected_answer_type) {
+          // Convert column-oriented data to the appropriate format based on visualization type
+          const viewType = expected_answer_type.toUpperCase() as ViewType;
+          setView(viewType);
+
+          switch (viewType) {
+            case ViewType.TABLE: {
+              // Convert column-oriented to row-oriented for table display
+              const rows = processTableData(data as Record<string, number[]>);
+              console.log("📋 Setting table data:", rows);
+              setTableData(rows);
               break;
-            case "TABLE":
-              setView(ViewType.TABLE);
+            }
+
+            case ViewType.SCATTERPLOT: {
+              // For scatter plot, data should already be in the right format
+              // Assuming data has x and y columns
+              const columns = Object.keys(data);
+              if (columns.length >= 2) {
+                const scatterData: ScatterPlotData = {
+                  data: data as Record<string, number[]>,
+                  x_column: columns[0],
+                  y_column: columns[1],
+                  title: "Scatter Plot",
+                  x_label: columns[0],
+                  y_label: columns[1],
+                };
+                console.log("📈 Setting scatter plot data:", scatterData);
+                setScatterPlotData(scatterData);
+              }
               break;
-            case "SCATTERPLOT":
-              setView(ViewType.SCATTERPLOT);
+            }
+
+            case ViewType.MAP: {
+              // For map view, store the data for HexMapView
+              console.log("🗺️ Setting map data:", data);
+              setMapData(data);
               break;
+            }
+
             default:
-              console.log("Unknown answer type:", expected_answer_type);
+              console.warn("Unknown expected_answer_type:", expected_answer_type);
           }
+
+          console.log(`✅ Processed ${row_count} rows${acres ? ` (${acres.toFixed(2)} acres)` : ''}`);
         } else if (status === "ERROR") {
-          console.error("SQL generation failed:", error_details);
-          // Optionally show error to user
+          console.error("SQL execution failed:", error_details);
         }
 
         return { received: true };
     },
   });
-
-  // (Ojas) -> This will be our primary function, but it is currently too slow because it pulls alot of data
-  // DO NOT DELETE 
-  // Receive SQL query execution results (the actual data) from backend
-//   useFrontendTool({
-//     name: "receive_sql_execution_result",
-//     description: "Receive the actual data results from execute_SQL_query. Call this after executing a SQL query to display the data in the frontend. The data should be in column-oriented format (e.g., {\"column1\": [val1, val2], \"column2\": [val3, val4]}).",
-//     parameters: [
-//       {
-//         name: "status",
-//         type: "string",
-//         description: "Status of SQL execution (SUCCESS or ERROR)",
-//         required: true,
-//       },
-//       {
-//         name: "data",
-//         type: "object",
-//         description: "Column-oriented data from the query result. Keys are column names, values are arrays of values.",
-//         required: false,
-//       },
-//       {
-//         name: "row_count",
-//         type: "number",
-//         description: "Number of rows returned",
-//         required: false,
-//       },
-//       {
-//         name: "acres",
-//         type: "number",
-//         description: "Total acres if area column exists",
-//         required: false,
-//       },
-//       {
-//         name: "expected_answer_type",
-//         type: "string",
-//         description: "Expected visualization type: MAP, TABLE, or SCATTERPLOT",
-//         required: false,
-//       },
-//       {
-//         name: "sql",
-//         type: "string",
-//         description: "The SQL query that was executed",
-//         required: false,
-//       },
-//       {
-//         name: "error_details",
-//         type: "string",
-//         description: "Error details if status is ERROR",
-//         required: false,
-//       },
-//     ],
-//     handler: async ({ status, data, row_count, acres, expected_answer_type, sql, error_details }) => {
-//         console.log("📊 Received SQL execution result:", {
-//           status,
-//           data,
-//           row_count,
-//           acres,
-//           expected_answer_type,
-//           sql,
-//           error_details
-//         });
-
-//         setView(expected_answer_type as ViewType);
-//         if (status === "SUCCESS" && data) {
-//           // Convert column-oriented data to the appropriate format based on visualization type
-          
-//           if (expected_answer_type === "TABLE") {
-//             // Convert column-oriented to row-oriented for table display
-//             const columns = Object.keys(data);
-//             const rowCount = (data as Record<string, number[]>)[columns[0]]?.length || 0;
-//             const rows = [];
-
-//             for (let i = 0; i < rowCount; i++) {
-//               const row: any = {};
-//               columns.forEach(col => {
-//                 row[col] = (data as Record<string, number[]>)[col][i];
-//               });
-//               rows.push(row);
-//             }
-
-//             console.log("📋 Setting table data:", rows);
-//             setTableData(rows);
-//           }
-//           else if (expected_answer_type === "SCATTERPLOT") {
-//             // For scatter plot, data should already be in the right format
-//             // Assuming data has x and y columns
-//             const columns = Object.keys(data);
-//             if (columns.length >= 2) {
-//               const scatterData: ScatterPlotData = {
-//                 data: data as Record<string, number[]>,
-//                 x_column: columns[0],
-//                 y_column: columns[1],
-//                 title: "Scatter Plot",
-//                 x_label: columns[0],
-//                 y_label: columns[1],
-//               };
-//               console.log("📈 Setting scatter plot data:", scatterData);
-//               setScatterPlotData(scatterData);
-//             }
-//           }
-//           else if (expected_answer_type === "MAP") {
-//             // For map view, store the data for HexMapView
-//             console.log("🗺️ Setting map data:", data);
-//             setMapData(data);
-//           }
-
-//           console.log(`✅ Processed ${row_count} rows${acres ? ` (${acres.toFixed(2)} acres)` : ''}`);
-//         } else if (status === "ERROR") {
-//           console.error("SQL execution failed:", error_details);
-//         }
-
-//         return { received: true };
-//     },
-//   });
 
 
   return (
@@ -275,8 +240,8 @@ const ToolView = () => {
                   <LastQueryDisplay lastToolCall={lastToolCall} />
                   <div style={{ marginTop: '2rem', height: 'calc(100vh - 300px)', minHeight: '600px' }}>
                     <HexMapView 
-                      geoJsonData={undefined} 
-                      highlightedHexes={new Set<string>()} 
+                      geoJsonData={geoJsonData} 
+                      highlightedHexes={mapData?.h3_index ? new Set(mapData.h3_index) : new Set<string>()} 
                       prescriptionMaps={[]} 
                       selectedPrescriptionLayer={null} 
                       onPrescriptionLayerChange={(layer: string | null) => {
@@ -340,7 +305,7 @@ export default function FarmPulse() {
           },
           {
             title: "Ca vs CEC",
-            message: "What is the relationship between calcium and CEC?",
+            message: "Plot calcium vs cec",
           },
           {
             title: "Fields",

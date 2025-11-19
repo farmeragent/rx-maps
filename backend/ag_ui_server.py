@@ -28,7 +28,7 @@ async def log_requests(request: Request, call_next):
         print(f"\n🔍 Incoming request to /:")
         print(f"   Method: {request.method}")
         print(f"   Headers: {dict(request.headers)}")
-        print(f"   Body: {body.decode() if body else 'empty'}")
+        # print(f"   Body: {body.decode() if body else 'empty'}")
     response = await call_next(request)
     if request.url.path == "/":
         print(f"   Response status: {response.status_code}")

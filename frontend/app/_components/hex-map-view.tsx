@@ -1,8 +1,5 @@
 'use client';
 
-// IMPORTANT: Import patch FIRST before any deck.gl code loads
-import '../_lib/luma-gl-patch';
-
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -267,7 +264,7 @@ export default function HexMapView({
         layers.push(highlightedLayer);
       }
 
-      console.log('[HexMapView] Setting layers, count:', layers.length);
+      // console.log('[HexMapView] Setting layers, count:', layers.length);
       setLayersState(layers);
     }).catch((error) => {
       console.error('[HexMapView] Failed to load deck.gl layers:', error);
