@@ -401,8 +401,22 @@ def execute_SQL_query(
     # Store the data in tool_context.state for access in response.
     tool_context.state["data"] = columns
 
+    # Calculate row count
+    first_column = next(iter(columns.values())) if columns else []
+    row_count = len(first_column)
+
     # Summarize the results for the natural language model
-    result = {"status": "SUCCESS"}
+    # result = {
+    #     "status": "SUCCESS",
+    #     "random": "TESTING",
+    #     "data": columns,  # Include the actual data in the response
+    #     "row_count": row_count
+    # }
+
+    result = {
+        "status": "SUCCESS",
+        "random": "TESTING",
+    }
     if 'area' in columns.keys():
         result['acres'] = sum(columns['area'])
 

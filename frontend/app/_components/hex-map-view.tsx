@@ -1,12 +1,12 @@
 'use client';
 
 // IMPORTANT: Import patch FIRST before any deck.gl code loads
-import '../../_lib/luma-gl-patch';
+import '../_lib/luma-gl-patch';
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { FIELD_CENTERS, FIELD_NAMES } from '../../_lib/constants';
+import { FIELD_CENTERS, FIELD_NAMES } from '../_lib/constants';
 
 // Dynamically import deck.gl components (client-side only)
 const DeckGL = dynamic(() => import('@deck.gl/react').then(mod => ({ default: mod.DeckGL })), { ssr: false });
