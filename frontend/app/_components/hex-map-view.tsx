@@ -133,17 +133,14 @@ export default function HexMapView({
   // Create layers with deck.gl
   useEffect(() => {
     if (!mounted || !geoJsonData || typeof window === 'undefined') {
-      console.log('[HexMapView] Skipping layer creation:', { mounted, hasGeoJsonData: !!geoJsonData, isWindow: typeof window !== 'undefined' });
       setLayersState([]);
       return;
     }
 
-    console.log('[HexMapView] Starting layer creation');
     Promise.all([
       import('@deck.gl/layers').then(mod => mod.GeoJsonLayer),
       import('@deck.gl/layers').then(mod => mod.PolygonLayer)
     ]).then(([GeoJsonLayer, PolygonLayer]) => {
-      console.log('[HexMapView] Deck.gl layers imported successfully');
       const layers: any[] = [];
 
       const getBaseColor = (feature: any) => {
