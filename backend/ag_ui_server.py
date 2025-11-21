@@ -5,6 +5,7 @@ Exposes the root_agent via AG-UI protocol for use with CopilotKit frontend
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+from agents.agent import root_agent
 from dotenv import load_dotenv
 import os
 import json

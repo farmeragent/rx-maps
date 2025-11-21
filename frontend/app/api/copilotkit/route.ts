@@ -21,8 +21,10 @@ const serviceAdapter = new ExperimentalEmptyAdapter();
 
 const runtime = new CopilotRuntime({
   agents: {
-    // Our AG-UI endpoint URL
-    "root_agent": new HttpAgent({ url: "http://127.0.0.1:8001/" }),
+    // Our AG-UI endpoint URL - uses Cloud Run in production, localhost in dev
+    "root_agent": new HttpAgent({
+      url: process.env.AG_UI_SERVER_URL || "http://127.0.0.1:8001/"
+    }),
   }
 });
 
