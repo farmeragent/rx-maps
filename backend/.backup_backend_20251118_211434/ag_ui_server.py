@@ -5,6 +5,7 @@ Exposes the root_agent via AG-UI protocol for use with CopilotKit frontend
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from ag_ui_adk import ADKAgent, add_adk_fastapi_endpoint
+from agents.agent import root_agent
 from dotenv import load_dotenv
 import os
 import json
@@ -46,8 +47,7 @@ app.add_middleware(
 adk_agent = ADKAgent(
     adk_agent=root_agent,
     app_name="agricultural_query_agent",
-    user_id="copilotkit_demo_user",
-    use_in_memory_services=True
+    user_id="copilotkit_demo_user"
 )
 
 # Add the AG-UI endpoint to FastAPI
@@ -93,9 +93,10 @@ if __name__ == "__main__":
     print("=" * 80)
     print(f"\n📍 Server running at: http://localhost:{port}")
     print(f"\n🔧 AG-UI endpoint:")
-    print(f"   • POST http://localhost:{port}/")
+    print(f"   • POST http://localhost:{port}/copilot (for CopilotKit)")
     print(f"\n🤖 Agent: {root_agent.name}")
     print(f"   Description: {root_agent.description}")
+    print(f"\n✓ Ready for CopilotKit frontend integration!")
     print("\n" + "=" * 80 + "\n")
 
     uvicorn.run(

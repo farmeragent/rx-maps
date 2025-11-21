@@ -21,23 +21,11 @@ dataset_id = os.getenv("BQ_DATASET_ID")
 data_project = os.getenv("GOOGLE_PROJECT_ID")
 MAX_NUM_ROWS = 100
 
-# Lazy initialization of genai client
-_llm_client = None
-
-def get_llm_client():
-    """Get or initialize the genai client."""
-    global _llm_client
-    if _llm_client is None:
-        # Check if running in cloud environment (use service account)
-        if os.getenv("GOOGLE_CLOUD_PROJECT"):
-            _llm_client = genai.Client()
-        else:
-            # Running locally - use API key
-            api_key = os.getenv("GOOGLE_API_KEY")
-            if not api_key:
-                raise ValueError("GOOGLE_API_KEY environment variable is not set")
-            _llm_client = genai.Client(api_key=api_key)
-    return _llm_client
+# Initialize genai client with API key
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    raise ValueError("GOOGLE_API_KEY environment variable is not set")
+llm_client = genai.Client(api_key=api_key)
 
 
 def get_database_settings():
@@ -69,7 +57,7 @@ def get_bigquery_schema_and_samples():
         credentials=None,
         user_agent='a-dummy-agent',
     )
-    dataset_ref = bigquery.DatasetReference(os.getenv('GOOGLE_PROJECT_ID'), os.getenv('BQ_DATASET_ID'))
+    dataset_ref = bigquery.DatasetReference(data_project, dataset_id)
     tables_context = {}
     for table in client.list_tables(dataset_ref):
         table_info = client.get_table(
@@ -80,6 +68,16 @@ def get_bigquery_schema_and_samples():
             for schema_field in table_info.schema
         ]
         table_ref = dataset_ref.table(table.table_id)
+        sample_values = []
+        if False:
+            sample_query = f"SELECT * FROM `{table_ref}` LIMIT 5"
+            sample_values = (
+                client.query(sample_query).to_dataframe().to_dict(orient="list")
+            )
+            for key in sample_values:
+                sample_values[key] = [
+                    _serialize_value_for_sql(v) for v in sample_values[key]
+                ]
 
         # Get unique field names if field_name column exists
         field_names = []
@@ -91,15 +89,13 @@ def get_bigquery_schema_and_samples():
             except Exception as e:
                 logger.warning(f"Failed to query field names: {e}")
 
-        # TODO: (OJAS) Example Values are missing from this return. 
         tables_context[str(table_ref)] = {
             "table_schema": table_schema,
+            "example_values": sample_values,
             "field_names": field_names,
         }
 
     return tables_context
-
-
 
 def validate_bigquery_sql(
     sql: str,
@@ -174,10 +170,9 @@ def validate_bigquery_sql(
     except Exception as e:
         return False, f"BigQuery validation failed: {str(e)}", None
 
-def generate_sql_and_query_database(
+def generate_SQL_query(
     question: str,
     tool_context: ToolContext,
-    max_rows: int = 1000,
 ) -> str:
     """Generates a SQL query from a natural language question.
 
@@ -187,21 +182,15 @@ def generate_sql_and_query_database(
             SQL query.
 
     Returns:
-        `str`: An SQL statement to answer this question.
-        `status`: "SUCCESS" (query was successful) or "ERROR" (query failed)
-        `row_count`: The number of rows returned after sampling.
-        `total_rows`: The total number of rows before sampling.
-        `sampled`: Boolean indicating if the data was sampled.
-        `acres`(optional): The number of acres returned from this query.
-        `error_details`(optional): If there's an error, what caused the error.
+        str: An SQL statement to answer this question.
     """
     logger.debug("bigquery_nl2sql - question: %s", question)
 
     prompt_template = """
         You are a BigQuery SQL expert tasked with generating SQL in the Google SQL
         dialect based on the user's natural language question.
-        Your task is to first write a Bigquery SQL query that answers the following question
-        while using the provided context. Then, you should summarize the query in a natural language explanation.
+        Your task is to write a Bigquery SQL query that answers the following question
+        while using the provided context.
 
         **Question Types:**
 
@@ -313,7 +302,7 @@ def generate_sql_and_query_database(
     )
 
     # TODO(david): Be able to support CHASE SQL (some robust NL-SQL method).
-    response = get_llm_client().models.generate_content(
+    response = llm_client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config={"temperature": 0.1},
@@ -355,7 +344,42 @@ def generate_sql_and_query_database(
     if not valid_query:
         return {"status": "ERROR",
                 "error_details": message}
-    
+
+    tool_context.state["sql_query"] = sql
+
+    return {
+        "status": "SUCCESS",
+        "sql_query": sql,
+        "sql_summary": result["sql_summary"],
+        "expected_answer_type": result["expected_answer_type"]
+    }
+
+def execute_SQL_query(
+    sql: str,
+    tool_context: ToolContext,
+    max_rows: int = 1000,
+) -> str:
+    """Executes a SQL query from a SQL query string.
+    Args:
+        sql_query: A string of the SQL query you want to do.
+        max_rows: Maximum number of rows to return (default 1000). If the query returns more rows,
+                  a random sample will be taken.
+
+    Returns:
+        A dictionary with the following keys:
+        `status`: "SUCCESS" (query was successful) or "ERROR" (query failed)
+        `row_count`: The number of rows returned after sampling.
+        `total_rows`: The total number of rows before sampling.
+        `sampled`: Boolean indicating if the data was sampled.
+        `acres`(optional): The number of acres returned from this query.
+        `error_details`(optional): If there's an error, what caused the error.
+    """
+    # First, let's validate the provied query is good and safe.
+    valid_query, message, _ = validate_bigquery_sql(sql)
+    if not valid_query:
+        return {"status": "ERROR",
+                "error_details": message}
+
     bigquery_client = get_bigquery_client(
         project=os.getenv('GOOGLE_PROJECT_ID'),
         credentials=None,
@@ -402,8 +426,6 @@ def generate_sql_and_query_database(
 
     # Store the data in tool_context.state for access in response.
     tool_context.state["data"] = columns
-    tool_context.state["sql_query"] = sql
-    tool_context.state["expected_answer_type"] = result["expected_answer_type"]
 
     # Calculate row count after sampling
     row_count = len(next(iter(columns.values()))) if columns else 0
@@ -415,9 +437,6 @@ def generate_sql_and_query_database(
         "row_count": row_count,
         "total_rows": total_rows,
         "sampled": sampled,
-        "expected_answer_type": result["expected_answer_type"],
-        "sql_query": sql,
-        "sql_summary": result["sql_summary"],
     }
 
     if 'area' in columns.keys():
@@ -426,4 +445,4 @@ def generate_sql_and_query_database(
     return result
 
 
-   
+
