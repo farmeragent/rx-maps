@@ -3,7 +3,7 @@ import "@copilotkit/react-ui/styles.css";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import { useCoAgent, useCopilotChat } from "@copilotkit/react-core";
 import { TextMessage, MessageRole } from "@copilotkit/runtime-client-gql";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import HexMapView from "./_components/hex-map-view";
 import ScatterPlot from "./_components/scatter-plot";
 import Table from "./_components/table";
@@ -78,6 +78,7 @@ const ToolView = ({ sidebarOpen, initialMessage, onInitialMessageSent }: {
   const [tableData, setTableData] = useState<any[] | null>(null);
   const [mapData, setMapData] = useState<any>(null);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const prevDataRef = useRef<any>(null);
 
   // Load default GeoJSON data on mount
   useEffect(() => {
@@ -106,9 +107,12 @@ const ToolView = ({ sidebarOpen, initialMessage, onInitialMessageSent }: {
   const data = state.data;
   const expected_answer_type = state.expected_answer_type;
 
-  if (data && expected_answer_type && view !== expected_answer_type) {
+  if (data && expected_answer_type && data !== prevDataRef.current) {
+    prevDataRef.current = data;
     const viewType = expected_answer_type.toUpperCase() as ViewType;
-    setView(viewType);
+    if(expected_answer_type !== view){
+      setView(viewType);
+    }
     switch (viewType) {
       case ViewType.TABLE: {
         // Convert column-oriented to row-oriented for table display
