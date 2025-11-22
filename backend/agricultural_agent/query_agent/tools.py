@@ -19,7 +19,7 @@ database_settings = None
 
 dataset_id = os.getenv("BQ_DATASET_ID")
 data_project = os.getenv("GOOGLE_PROJECT_ID")
-MAX_NUM_ROWS = 100
+MAX_NUM_ROWS = 100000
 
 # Lazy initialization of genai client
 _llm_client = None
@@ -177,7 +177,7 @@ def validate_bigquery_sql(
 def generate_sql_and_query_database(
     question: str,
     tool_context: ToolContext,
-    max_rows: int = 1000,
+    max_rows: int = 100000,
 ) -> str:
     """Generates a SQL query from a natural language question.
 
@@ -411,7 +411,6 @@ def generate_sql_and_query_database(
     # Summarize the results for the natural language model
     result = {
         "status": "SUCCESS",
-        "data": columns,  # Include the actual data in the response
         "row_count": row_count,
         "total_rows": total_rows,
         "sampled": sampled,
@@ -424,6 +423,11 @@ def generate_sql_and_query_database(
         result['acres'] = sum(columns['area'])
 
     return result
+
+    # return {
+    #     "status": "SUCCESS",
+    #     "sql_query": sql,
+    # }
 
 
    

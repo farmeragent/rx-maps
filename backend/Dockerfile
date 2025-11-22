@@ -8,14 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for fast dependency management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
+# Copy requirements first for caching
+COPY requirements.txt ./
 
 # Install dependencies
-RUN uv sync --frozen --no-dev
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -28,4 +25,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # Run the server
-CMD ["uv", "run", "uvicorn", "ag_ui_server:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "ag_ui_server:app", "--host", "0.0.0.0", "--port", "8080"]

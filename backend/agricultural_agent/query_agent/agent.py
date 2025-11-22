@@ -1,6 +1,5 @@
 
 from google.adk.agents import Agent
-from google.adk.apps.app import App
 from google.adk.agents.callback_context import CallbackContext
 # from google.adk.tools.bigquery import BigQueryCredentialsConfig
 # from google.adk.tools.bigquery import BigQueryToolset
@@ -42,9 +41,9 @@ def setup_before_agent_call(callback_context: CallbackContext) -> None:
             get_database_settings()
         )
 
-root_agent = Agent(
+query_agent = Agent(
     model='gemini-2.5-flash',
-    name='root_agent',
+    name='query_agent',
     description="Helps query an agricultural database.",
     instruction=return_instructions(),
     tools=[generate_sql_and_query_database],
@@ -54,5 +53,5 @@ root_agent = Agent(
     # output_key="query_content"
 )
 
-app = App(root_agent=root_agent, name="agents")
+
 
