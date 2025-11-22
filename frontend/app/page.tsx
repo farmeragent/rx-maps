@@ -1,11 +1,13 @@
 "use client";
 import "@copilotkit/react-ui/styles.css";
 import { CopilotSidebar } from "@copilotkit/react-ui";
-import { useCoAgent } from "@copilotkit/react-core";
+import { useCoAgent, useCopilotChat } from "@copilotkit/react-core";
+import { TextMessage, MessageRole } from "@copilotkit/runtime-client-gql";
 import { useEffect, useState } from "react";
 import HexMapView from "./_components/hex-map-view";
 import ScatterPlot from "./_components/scatter-plot";
 import Table from "./_components/table";
+import { Homepage } from "./_components/homepage";
 import { useSqlExecutionResult, ViewType, ScatterPlotData } from "./_lib/useSqlExecutionResult";
 
 interface LastQueryDisplayProps {
@@ -46,7 +48,30 @@ const LastQueryDisplay = ({ lastToolCall }: LastQueryDisplayProps) => {
   );
 };
 
-const ToolView = () => {
+// Component to send initial message after mount
+const InitialMessageSender = ({ message, onSent }: { message: string; onSent: () => void }) => {
+  const chat = useCopilotChat();
+
+  useEffect(() => {
+    if (message && chat.appendMessage) {
+      const textMessage = new TextMessage({
+        id: Date.now().toString(),
+        role: MessageRole.User,
+        content: message,
+      });
+      chat.appendMessage(textMessage);
+      onSent();
+    }
+  }, [message, chat, onSent]);
+
+  return null;
+};
+
+const ToolView = ({ sidebarOpen, initialMessage, onInitialMessageSent }: {
+  sidebarOpen: boolean;
+  initialMessage: string | null;
+  onInitialMessageSent: () => void;
+}) => {
   const [view, setView] = useState<ViewType>(ViewType.MAP);
   const [lastToolCall, setLastToolCall] = useState<{ sql: string } | null>(null);
   const [scatterPlotData, setScatterPlotData] = useState<ScatterPlotData | null>(null);
@@ -126,8 +151,11 @@ const ToolView = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw' }}>
-      {/* Main content area */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '2rem' }}>
+      {initialMessage && (
+        <InitialMessageSender message={initialMessage} onSent={onInitialMessageSent} />
+      )}
+      {/* Main content area - marginRight accounts for fixed sidebar */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '2rem', marginRight: sidebarOpen ? '450px' : '0' }}>
         {(() => {
           switch (view) {
             case ViewType.HOME:
@@ -204,15 +232,33 @@ const ToolView = () => {
   );
 };
 
-export default function FarmPulse() {
+function MainApp() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showHomepage, setShowHomepage] = useState(true);
+  const [initialMessage, setInitialMessage] = useState<string | null>(null);
+
+  const handleHomepageSubmit = (question: string) => {
+    // Store the message to be sent after transition
+    setInitialMessage(question);
+    // Open sidebar and transition away from homepage
+    setSidebarOpen(true);
+    setShowHomepage(false);
+  };
+
   return (
     <CopilotSidebar
-      defaultOpen={true}
+      key={showHomepage ? 'homepage' : 'toolview'}
+      defaultOpen={!showHomepage}
+      clickOutsideToClose={false}
+      onSetOpen={(open) => {
+        setSidebarOpen(open);
+        if (open && showHomepage) setShowHomepage(false);
+      }}
       labels={{
         title: "Farm Pulse Assistant",
         initial: "Hi! How can I help?",
       }}
-      suggestions={[
+      suggestions={showHomepage ? [] : [
         {
           title: "Low P NoR",
           message: "Show me areas of low phosphorus in the north-of-road field",
@@ -225,12 +271,21 @@ export default function FarmPulse() {
           title: "Fields",
           message: "Can you show me a table of all my fields?",
         },
-      ]}>
-
-      <ToolView />
-
+      ]}
+    >
+      {showHomepage ? (
+        <Homepage onSubmit={handleHomepageSubmit} />
+      ) : (
+        <ToolView
+          sidebarOpen={sidebarOpen}
+          initialMessage={initialMessage}
+          onInitialMessageSent={() => setInitialMessage(null)}
+        />
+      )}
     </CopilotSidebar>
-
   );
+}
 
+export default function FarmPulse() {
+  return <MainApp />;
 }
