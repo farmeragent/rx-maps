@@ -176,24 +176,21 @@ const ToolView = ({ sidebarOpen, initialMessage, onInitialMessageSent }: {
 
             case ViewType.MAP:
               return (
-                <div>
-                  <h1>Map View</h1>
-                  <LastQueryDisplay lastToolCall={lastToolCall} />
-                  <div style={{ marginTop: '2rem', height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-                    <HexMapView
-                      geoJsonData={geoJsonData}
-                      highlightedHexes={mapData?.h3_index ? new Set(mapData.h3_index) : new Set<string>()}
-                      prescriptionMaps={[]}
-                      selectedPrescriptionLayer={null}
-                      onPrescriptionLayerChange={(layer: string | null) => {
-                        // TODO: Implement prescription layer change handler
-                      }}
-                      centerField={null}
-                      onCenterFieldComplete={() => {
-                        // TODO: Implement center field complete handler
-                      }}
-                    />
-                  </div>
+                <div style={{ height: '100vh', width: 'calc(100% + 4rem)', margin: '-2rem', padding: 0 }}>
+                  <HexMapView
+                    key={sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}
+                    geoJsonData={geoJsonData}
+                    highlightedHexes={mapData?.h3_index ? new Set(mapData.h3_index) : new Set<string>()}
+                    prescriptionMaps={[]}
+                    selectedPrescriptionLayer={null}
+                    onPrescriptionLayerChange={(layer: string | null) => {
+                      // TODO: Implement prescription layer change handler
+                    }}
+                    centerField={null}
+                    onCenterFieldComplete={() => {
+                      // TODO: Implement center field complete handler
+                    }}
+                  />
                 </div>
               );
 
